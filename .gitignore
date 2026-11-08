@@ -1,0 +1,4 @@
+tests/__pycache__/*
+.env
+src/pipeline/data/__pycache__/*
+src/LEAN_Cypher.egg-info/
