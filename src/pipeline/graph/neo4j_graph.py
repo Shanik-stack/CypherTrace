@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase
 import pandas as pd
 
-load_dotenv()
-uri = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
-user, password = ("neo4j", os.environ["NEO4J_PASSWORD"])
+# load_dotenv()
+# uri = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
+# user, password = ("neo4j", os.environ["NEO4J_PASSWORD"])
 
 # Databse connector function
 def connect_to_database():

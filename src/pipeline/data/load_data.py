@@ -2,10 +2,10 @@ from datasets import load_dataset
 
 # get dataset from hf
 def get_dataset(url: str, **kwargs):
-    
+    validation_type = kwargs.get("validation_type")
     dataset = load_dataset(
-        f"{url}",
-        kwargs["validation_type"]
+        path = f"{url}",
+        name = validation_type
     ) 
     train_dataset = dataset["train"]
     test_dataset = dataset["test"]

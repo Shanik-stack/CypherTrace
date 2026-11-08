@@ -1,0 +1,2 @@
+
+base_prompt1 = """You must make Cypher queries for user question and for graph database schema. Only give the cypher query with nothing else. Place a lot of importance on the schema and follow it perfectly"""
