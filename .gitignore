@@ -3,4 +3,5 @@ tests/__pycache__/*
 src/pipeline/data/__pycache__/*
 src/pipeline/agent/__pycache__/*
 src/pipeline/graph/__pycache__/*
+src/pipeline/lean_request/__pycache__/*
 src/LEAN_Cypher.egg-info/
