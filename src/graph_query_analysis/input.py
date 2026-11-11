@@ -2,8 +2,9 @@
 """Read the JSON returned by the existing `build_lean_request()` function.
 
 No Cypher parsing, no rehydration of CypherAST objects, no query execution.
-Only the request envelope, top-level AST shape, and schema fields are checked.
-Every nested AST node stays in the original JSON dictionary/list structure.
+The request envelope and schema fields are checked. The upstream parser is
+responsible for supplying one Cypher -> Query -> clauses AST per request;
+this loader does not revalidate or reconstruct its nested nodes.
 """
 
 from copy import deepcopy

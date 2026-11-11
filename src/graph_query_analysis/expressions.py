@@ -28,9 +28,9 @@ from typing import Literal
 from graph_query_analysis.graph import NodeRequirement, RelationshipRequirement
 from graph_query_analysis.model import (
     BagExpression,
-    NodeSymbol,
-    RelationshipSymbol,
+
     Symbol,
+    ValueKind,
 )
 
 
@@ -166,8 +166,30 @@ class IsNull(Predicate):
 class HasLabel(Predicate):
     """A symbolic node has the requested label, not a lookup in NetworkX."""
 
-    node: NodeSymbol
+    node: Symbol
     label: str
+
+
+@dataclass(frozen=True)
+class SameValue(Predicate):
+    """Total equality for *row values*, including NULL = NULL for grouping.
+
+    Unlike Cypher's comparison `=`, this returns TRUE/FALSE, never NULL.
+    Node/relationship values compare by entity identity.
+    """
+
+    left: ValueExpression
+    right: ValueExpression
+
+
+@dataclass(frozen=True)
+class NodeInGraph(Predicate):
+    """The referenced value is a node of the underlying (unknown) data graph.
+
+    Needed for node-only MATCH patterns without labels/relationships.
+    """
+
+    node: Symbol
 
 
 Direction = Literal["OUTGOING", "INCOMING", "BOTH"]
@@ -182,9 +204,9 @@ class RelationshipHolds(Predicate):
     but must not double-count a self-loop. Edge identities are symbolic.
     """
 
-    relationship: RelationshipSymbol
-    left: NodeSymbol
-    right: NodeSymbol
+    relationship: Symbol
+    left: Symbol
+    right: Symbol
     types: tuple[str, ...] = ()
     direction: Direction = "OUTGOING"
 
@@ -269,9 +291,11 @@ class MatchBag(BagExpression):
 
     The requirements are only those introduced/tested by this clause, not the
     entire accumulated NetworkX graph. This distinction matters across WITH.
-    The transformer must reuse symbols for bound variables and generate fresh
-    symbols for anonymous nodes/relationships. Relationship uniqueness and
-    multi-path matching semantics will be imposed by the transformer.
+    The transformer reuses in-scope symbols and introduces fresh witnesses.
+    Node labels, relationship types/endpoints, property-map and inline-pattern
+    predicates are authoritative here, not in an additional FilterBag. Cypher
+    25 requires different relationship occurrences within the same MATCH to
+    bind to distinct relationship identities.
     """
 
     source: BagExpression
@@ -289,15 +313,17 @@ class FilterBag(BagExpression):
 
 @dataclass(frozen=True)
 class Projection:
-    """One output column: evaluate an expression and expose it as alias."""
-
-    The optional alias is the Cypher variable name, not an invented display
-    header. Unaliased expressions still have a well-defined value and position.
-    """
+    """Output column and its identity; type is never duplicated as a category."""
 
     alias: str | None
     expression: ValueExpression
     symbol: Symbol
+    value_type: "CypherType | None" = None
+
+    @property
+    def value_kind(self) -> ValueKind:
+        from graph_query_analysis.cypher_types import kind_of
+        return kind_of(self.value_type) if self.value_type else "UNKNOWN"
 
 
 @dataclass(frozen=True)
@@ -317,7 +343,9 @@ class ExtendBag(BagExpression):
 class ProjectBag(BagExpression):
     """Project columns, summing multiplicities of equal resulting tuples.
 
-    Projection does not remove duplicates. DISTINCT must wrap ProjectBag.
+    Bag interpretation sums multiplicities of equal output tuples. Under an
+    ordered-stream interpretation, projection emits rows in input order.
+    DISTINCT is a separate operation.
     """
 
     source: BagExpression
@@ -331,23 +359,72 @@ class DistinctBag(BagExpression):
     source: BagExpression
 
 
+def aggregate_calls(expression: ValueExpression) -> tuple[AggregateCall, ...]:
+    """Find aggregate occurrences recursively, without descending into their inputs."""
+    if isinstance(expression, AggregateCall):
+        return (expression,)
+    if isinstance(expression, Arithmetic):
+        return aggregate_calls(expression.left) + aggregate_calls(expression.right)
+    if isinstance(expression, FunctionCall):
+        return tuple(call for arg in expression.arguments for call in aggregate_calls(arg))
+    if isinstance(expression, PropertyAccess):
+        return aggregate_calls(expression.owner)
+    return ()
+
+
+def contains_aggregate(expression: ValueExpression) -> bool:
+    return bool(aggregate_calls(expression))
+
+
+@dataclass(frozen=True)
+class GroupKey:
+    """Expression evaluated on input rows to determine a grouping partition."""
+    expression: ValueExpression
+    symbol: Symbol
+
+
+@dataclass(frozen=True)
+class AggregateComputation:
+    """One aggregate evaluated over the rows within a group."""
+    expression: AggregateCall
+    symbol: Symbol
+
+
 @dataclass(frozen=True)
 class AggregateBag(BagExpression):
-    """Group and aggregate, preserving the original output-column order.
+    """Group input rows, compute aggregates, then evaluate ordered final columns.
 
-    With no grouping expressions, global aggregation yields one result row
-    even for empty input. The mathematical semantics are defined separately.
+    `columns` refer only to GroupKey and AggregateComputation output symbols.
+    Grouping keys may be implicit or explicitly specified, including unprojected
+    keys. No group keys means a single global group, even for empty input.
     """
 
     source: BagExpression
+    grouping_keys: tuple[GroupKey, ...]
+    aggregate_computations: tuple[AggregateComputation, ...]
     columns: tuple[Projection, ...]
 
-    @property
-    def grouping(self) -> tuple[Projection, ...]:
-        return tuple(column for column in self.columns
-                     if not isinstance(column.expression, AggregateCall))
 
-    @property
-    def aggregates(self) -> tuple[Projection, ...]:
-        return tuple(column for column in self.columns
-                     if isinstance(column.expression, AggregateCall))
+@dataclass(frozen=True)
+class SortKey:
+    expression: ValueExpression
+    descending: bool = False
+
+
+@dataclass(frozen=True)
+class SortBag(BagExpression):
+    """Ordered row stream over a source bag, using Cypher ordering rules.
+
+    A bag alone carries no row-order guarantee. Ties have unspecified ordering.
+    An evaluator must represent this as a sequence, not only a row-count map.
+    """
+    source: BagExpression
+    keys: tuple[SortKey, ...]
+
+
+@dataclass(frozen=True)
+class SliceBag(BagExpression):
+    """SKIP/LIMIT on a row stream. Without SortBag, selected rows are arbitrary."""
+    source: BagExpression
+    skip: ValueExpression | None = None
+    limit: ValueExpression | None = None

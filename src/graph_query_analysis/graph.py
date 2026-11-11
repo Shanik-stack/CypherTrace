@@ -12,11 +12,13 @@ remain in `model.py` and must be transformed separately.
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Literal
+from typing import Iterable, Literal, TYPE_CHECKING
 
 import networkx as nx
 
-from graph_query_analysis.model import GraphSchema, NodeSymbol, RelationshipSymbol
+from graph_query_analysis.model import GraphSchema, Symbol, NodeSymbol, ValueSymbol, RelationshipSymbol
+if TYPE_CHECKING:
+    from graph_query_analysis.expressions import Predicate
 
 
 Direction = Literal["OUTGOING", "INCOMING", "BOTH"]
@@ -26,15 +28,15 @@ Direction = Literal["OUTGOING", "INCOMING", "BOTH"]
 class NodeRequirement:
     """Constraints on a possible node bound to `symbol`.
 
-    `predicates` can contain symbolic expression objects or serialized AST
-    fragments. This module stores them without interpreting them.
+    `predicates` are symbolic conditions introduced by this pattern occurrence.
+    MatchBag is their semantic owner; NetworkX is a descriptive snapshot.
 
     Distinct NodeSymbols are NOT automatically distinct database nodes.
     """
 
-    symbol: NodeSymbol
+    symbol: Symbol
     labels: tuple[str, ...] = ()
-    predicates: tuple[Any, ...] = ()
+    predicates: tuple["Predicate", ...] = ()
 
 
 @dataclass(frozen=True)
@@ -50,12 +52,12 @@ class RelationshipRequirement:
     storage convention, NOT a required graph direction.
     """
 
-    symbol: RelationshipSymbol
-    left: NodeSymbol
-    right: NodeSymbol
+    symbol: Symbol
+    left: NodeSymbol | ValueSymbol
+    right: NodeSymbol | ValueSymbol
     types: tuple[str, ...] = ()
     direction: Direction = "OUTGOING"
-    predicates: tuple[Any, ...] = ()
+    predicates: tuple["Predicate", ...] = ()
 
 
 def build_schema_graph(schema: GraphSchema) -> nx.MultiDiGraph:
@@ -89,8 +91,8 @@ def build_schema_graph(schema: GraphSchema) -> nx.MultiDiGraph:
 
 def _add_node(graph: nx.MultiDiGraph, req: NodeRequirement) -> None:
     """Accumulate constraints without overwriting older requirements."""
-    if not isinstance(req.symbol, NodeSymbol):
-        raise TypeError("NodeRequirement.symbol must be a NodeSymbol")
+    if not isinstance(req.symbol, (NodeSymbol, ValueSymbol)):
+        raise TypeError("NodeRequirement.symbol must be a node-valued symbol")
 
     if req.symbol not in graph:
         graph.add_node(req.symbol, labels=(), predicates=())
@@ -101,10 +103,10 @@ def _add_node(graph: nx.MultiDiGraph, req: NodeRequirement) -> None:
 
 
 def _add_relationship(graph: nx.MultiDiGraph, req: RelationshipRequirement) -> None:
-    if not isinstance(req.symbol, RelationshipSymbol):
-        raise TypeError("RelationshipRequirement.symbol must be a RelationshipSymbol")
-    if not isinstance(req.left, NodeSymbol) or not isinstance(req.right, NodeSymbol):
-        raise TypeError("Relationship endpoints must be NodeSymbols")
+    if not isinstance(req.symbol, (RelationshipSymbol, ValueSymbol)):
+        raise TypeError("RelationshipRequirement.symbol must be a relationship-valued symbol")
+    if not isinstance(req.left, (NodeSymbol, ValueSymbol)) or not isinstance(req.right, (NodeSymbol, ValueSymbol)):
+        raise TypeError("Relationship endpoints must be node-valued symbols")
     if req.direction not in ("OUTGOING", "INCOMING", "BOTH"):
         raise ValueError(f"Unsupported relationship direction: {req.direction!r}")
 

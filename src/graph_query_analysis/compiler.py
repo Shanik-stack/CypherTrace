@@ -12,45 +12,73 @@ from graph_query_analysis.transforms import TransformError, UnsupportedCypherErr
 from graph_query_analysis.graph import GraphSnapshot
 
 
-def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
-    """Return the initial state followed by the state after each clause.
+def compile_request(
+    request: AnalysisRequest,
+) -> tuple[tuple[SymbolicState, ...] | None, tuple[dict, ...]] |None:
 
-    A transformation failure stops compilation and identifies the clause that
-    the LLM must revise. Only the currently supported read-only query shape,
-    ending in RETURN, is accepted.
-    """
     clauses = request.clauses
-    if not clauses:
-        raise TransformError("Query contains no clauses")
 
     state = SymbolicState(
         schema=request.schema,
         scope=(),
         bag=UnitBag(),
         graph=GraphSnapshot.empty(),
-    )    
-    states = [state]
+    )
 
-    for index, clause in enumerate(clauses, start=1):
-        kind = clause["type"]
-        try:
+    success_states = [state]
+    failed_states = []
+    index = None
+    kind = None
+
+    try:
+        if not clauses:
+            raise TransformError("Query contains no clauses")
+
+        if clauses[-1]["type"] != "Return":
+            raise UnsupportedCypherError(
+                "Only queries ending in RETURN are supported"
+            )
+
+        for index, clause in enumerate(clauses, start=1):
+            kind = clause["type"]
+
             if kind == "Return" and index != len(clauses):
-                raise UnsupportedCypherError("RETURN must be the final clause")
+                raise UnsupportedCypherError(
+                    "RETURN must be the final clause"
+                )
+
             state = transform_clause(state, clause)
-        except (TransformError, UnsupportedCypherError) as exc:
-            raise type(exc)(f"Clause {index} ({kind}): {exc}") from exc
-        states.append(state)
+            success_states.append(state)
 
-    if clauses[-1]["type"] != "Return":
-        raise UnsupportedCypherError("Only queries ending in RETURN are supported")
+    except (TransformError, UnsupportedCypherError) as exc:
+        failed_states.append({
+            "request_id": request.request_id,
+            "query": request.query_text,
+            "clause_index": index,
+            "clause_type": kind,
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        })
+        return None
 
-    return tuple(states)
+    return tuple(success_states), tuple(failed_states)
+
+def compile_requests(requests: list[AnalysisRequest] | tuple[AnalysisRequest]):
+    all_states, all_failed = [], []
+    for query_idx in range(len(requests)):
+            analysis_request = analysis_requests[query_idx]
+            states, failed_states = compile_request(analysis_request)
+            all_states.append(states)
+            all_failed.append(all_failed)
+    return all_states, all_failed
+            
+
 
 
 if __name__ == "__main__":
     from pathlib import Path
     import json
-    path = Path(r"lean_requests_json\cypherast_lean_request.json")
+    path = Path(r"graph_analysis_requests\cypherast_lean_request.json")
     with open(path, 'r') as f:
         json_request = json.load(f)
     json_request_0 = json_request[0]
@@ -62,7 +90,10 @@ if __name__ == "__main__":
         analysis_request = analysis_requests[query_idx]
         print(analysis_request.query_text)
         print("\n\n ---------------- STATES ------------\n\n")
-        states = compile_request(analysis_request)
+        states, failed_states = compile_request(analysis_request)
+        print("\n\n ------ 10 FAILED STATES ----\n\n")
+        print(failed_states[:10])
+        print("------------------\n\n")
         print(analysis_request)
 
         def bag_chain(bag):

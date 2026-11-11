@@ -70,8 +70,8 @@ class AnalysisRequest:
 
     query_ast holds the ORIGINAL CypherAST JSON dictionaries. Nested `args`,
     `Map.entries`, lists, null fields, and optional AST metadata are retained.
-    The validated top-level form is Cypher -> Query -> clauses; other forms
-    (such as UNION roots) are not silently treated as sequential clauses.
+    The upstream request contract supplies one Cypher -> Query -> clauses root.
+    This model does not parse Cypher or validate that contract again.
     """
 
     protocol_version: int
@@ -103,19 +103,35 @@ class RelationshipSymbol:
 
 
 @dataclass(frozen=True)
-class ScalarSymbol:
+class ValueSymbol:
+    """Identity of a computed value, independent of its Cypher value type."""
     name: str
 
 
-Symbol = NodeSymbol | RelationshipSymbol | ScalarSymbol
+# Keep the earlier name as an alias for callers, not as a separate symbol type.
+ScalarSymbol = ValueSymbol
+Symbol = NodeSymbol | RelationshipSymbol | ValueSymbol
+ValueKind = Literal["NODE", "RELATIONSHIP", "SCALAR", "UNKNOWN"]
 
 
 @dataclass(frozen=True)
 class Binding:
-    """A Cypher variable associated with a symbolic term, not a real row."""
+    """A Cypher name bound to a symbolic value; type is the single source of truth."""
 
     variable: str
     symbol: Symbol
+    value_type: "CypherType | None" = None
+
+    @property
+    def value_kind(self) -> ValueKind:
+        from graph_query_analysis.cypher_types import kind_of
+        if self.value_type is not None:
+            return kind_of(self.value_type)
+        if isinstance(self.symbol, NodeSymbol):
+            return "NODE"
+        if isinstance(self.symbol, RelationshipSymbol):
+            return "RELATIONSHIP"
+        return "UNKNOWN"
 
 
 class BagExpression:
@@ -139,5 +155,5 @@ class SymbolicState:
     schema: GraphSchema
     scope: tuple[Binding, ...]
     bag: BagExpression
-    graph: "GraphSnapshot | None" = None  # NetworkX symbolic-pattern snapshot.
+    graph: "GraphSnapshot"  # Accumulated symbolic pattern, not the data graph.
 

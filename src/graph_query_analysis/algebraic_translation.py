@@ -6,7 +6,7 @@
 from dataclasses import dataclass, fields, is_dataclass
 from typing import Sequence
 
-from .expressions import (
+from graph_query_analysis.expressions import (
     Add, AggregateBag, AggregateCall, AllOf, AnyOf, Arithmetic, Comparison,
     DistinctBag, EmptyBag, ExtendBag, FilterBag, FunctionCall, GroupKey,
     HasLabel, Indicator, IsNull, MatchBag, MultiplicityConstant,
@@ -15,8 +15,8 @@ from .expressions import (
     SortBag, SumOver, Support, SymbolReference, TruthLiteral, ValueExpression,
     ValueLiteral,
 )
-from .model import BagExpression, Symbol, SymbolicState, UnitBag
-from .types import FUNCTIONS
+from graph_query_analysis.model import BagExpression, Symbol, SymbolicState, UnitBag
+from graph_query_analysis.cypher_types import FUNCTIONS
 
 
 class SymbolicSemanticsUnsupported(NotImplementedError):
@@ -207,17 +207,29 @@ def _substitute_aggregates(expression: ValueExpression,
 
 
 def symbolic_bag(bag: BagExpression) -> SymbolicBag:
-    """Derive the multiplicity of every possible output binding, symbolically.
+    """Interpret the compiled operator tree without a database.
 
-    Project uses total row-value equality, not Cypher's three-valued `=`.
-    This is essential when rows contain NULL or nodes/relationships.
+    Project uses total row-value equality, not Cypher three-valued `=`.
     """
+    return _symbolic_bag(bag, {})
+
+
+def _symbolic_bag(bag: BagExpression, cache: dict[int, SymbolicBag]) -> SymbolicBag:
+    """Share previous operator results by identity, without changing their classes."""
+    key = id(bag)
+    if key not in cache:
+        cache[key] = _symbolic_bag_uncached(bag, cache)
+    return cache[key]
+
+
+def _symbolic_bag_uncached(bag: BagExpression, cache: dict[int, SymbolicBag]) -> SymbolicBag:
+    """One operator's mathematical interpretation, built from its input."""
     if isinstance(bag, UnitBag):
         return SymbolicBag((), ONE)
     if isinstance(bag, EmptyBag):
         return SymbolicBag((), ZERO)
     if isinstance(bag, MatchBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         symbols = _unique((*previous.symbols,
                            *(node.symbol for node in bag.nodes),
                            *(rel.left for rel in bag.relationships),
@@ -227,29 +239,29 @@ def symbolic_bag(bag: BagExpression) -> SymbolicBag:
         _check_functions(conditions)
         return SymbolicBag(symbols, _times(previous.multiplicity, _condition(conditions)))
     if isinstance(bag, FilterBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         _check_functions(bag.predicate)
         return SymbolicBag(previous.symbols,
                            _times(previous.multiplicity, Indicator(bag.predicate)),
                            previous.ordering)
     if isinstance(bag, ExtendBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         _check_functions(bag.columns)
         return SymbolicBag(_unique((*previous.symbols, *_symbol_rows(bag.columns))),
                            _times(previous.multiplicity, _projection_constraints(bag.columns)),
                            previous.ordering)
     if isinstance(bag, ProjectBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         _check_functions(bag.columns)
         result = _symbol_rows(bag.columns)
         dropped = tuple(s for s in previous.symbols if s not in result)
         body = _times(previous.multiplicity, _projection_constraints(bag.columns))
         return SymbolicBag(result, _sum(dropped, body), previous.ordering)
     if isinstance(bag, DistinctBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         return SymbolicBag(previous.symbols, Support(previous.multiplicity))
     if isinstance(bag, SortBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         _check_functions(bag.keys)
         return SymbolicBag(previous.symbols, previous.multiplicity,
                            "ordered by specified keys; ties unspecified")
@@ -259,7 +271,7 @@ def symbolic_bag(bag: BagExpression) -> SymbolicBag:
             "formula alone cannot determine which rows survive, especially with ties"
         )
     if isinstance(bag, AggregateBag):
-        previous = symbolic_bag(bag.source)
+        previous = _symbolic_bag(bag.source, cache)
         _check_functions(bag.grouping_keys)
         _check_functions(bag.aggregate_computations)
         _check_functions(bag.columns)
@@ -375,22 +387,25 @@ def format_multiplicity(expression: MultiplicityExpression) -> str:
 
 
 def symbolic_trace(states: Sequence[SymbolicState],
-                   clauses: Sequence[dict] | None = None) -> tuple[SymbolicStateResult, ...]:
+                   clauses: Sequence[dict] | None = None,
+                   *, format_formulas: bool = True) -> tuple[SymbolicStateResult, ...]:
     """One LLM-readable, schema-only summary per compiler state.
 
     Unsupported semantics are reported explicitly; previous valid states survive.
     This makes it safe to use for feedback without inventing database rows.
     """
     results = []
+    cache: dict[int, SymbolicBag] = {}
     for index, state in enumerate(states):
         clause = ("INITIAL" if index == 0 else clauses[index - 1]["type"]
                   if clauses is not None else type(state.bag).__name__)
         try:
-            result = symbolic_bag(state.bag)
+            result = _symbolic_bag(state.bag, cache)
             results.append(SymbolicStateResult(
                 index, clause, tuple(b.variable for b in state.scope),
                 tuple(_name(s) for s in result.symbols), result.multiplicity,
-                format_multiplicity(result.multiplicity), result.ordering))
+                (format_multiplicity(result.multiplicity) if format_formulas else None),
+                result.ordering))
         except SymbolicSemanticsUnsupported as exc:
             results.append(SymbolicStateResult(
                 index, clause, tuple(b.variable for b in state.scope),

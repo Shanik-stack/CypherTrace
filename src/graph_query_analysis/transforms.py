@@ -12,20 +12,21 @@ Implemented fragment (Neo4j Cypher 25):
     direction, simple conjunctions of labels, and property maps;
   * MATCH/inline WHERE for the predicate forms recognized below;
   * WITH / RETURN projection, DISTINCT, and direct aggregate calls;
-  * WITH ... WHERE evaluated against the projected scope.
+  * WITH WHERE scope preservation, ORDER BY, SKIP/LIMIT for supported AST nodes.
 
 Unknown syntax is rejected explicitly. OPTIONAL MATCH, variable-length paths,
-path-variable bindings, ordering, slicing, subqueries, and writes are NOT yet
-modeled. An expression tree is not itself a correctness proof or a solver.
+path variables, standalone ordering, subqueries and writes are NOT yet modeled. An expression tree is not itself a correctness proof or a solver.
 """
 
 from dataclasses import replace
-from itertools import combinations
 from typing import Any, Mapping
 
 from graph_query_analysis.expressions import (
     AggregateBag,
     AggregateCall,
+    AggregateComputation,
+    GroupKey,
+    contains_aggregate,
     AllOf,
     AnyOf,
     Arithmetic,
@@ -41,6 +42,9 @@ from graph_query_analysis.expressions import (
     Predicate,
     ProjectBag,
     Projection,
+    SortKey,
+    SortBag,
+    SliceBag,
     PropertyAccess,
     SymbolReference,
     TruthLiteral,
@@ -48,11 +52,12 @@ from graph_query_analysis.expressions import (
     ValueLiteral,
 )
 from graph_query_analysis.graph import NodeRequirement, RelationshipRequirement
+from graph_query_analysis.cypher_types import infer_type, CypherTypeError, UnsupportedFunctionError
 from graph_query_analysis.model import (
     Binding,
     NodeSymbol,
     RelationshipSymbol,
-    ScalarSymbol,
+    ValueSymbol,
     SymbolicState,
 )
 
@@ -152,6 +157,15 @@ def _fresh_symbol(state: SymbolicState, name: str | None, *, relationship: bool,
     return RelationshipSymbol(candidate) if relationship else NodeSymbol(candidate)
 
 
+def _check_value(expression: ValueExpression, state: SymbolicState) -> ValueExpression:
+    """Enforce registered function contracts everywhere, not just in RETURN."""
+    try:
+        infer_type(expression, state)
+    except CypherTypeError as exc:
+        raise TransformError(str(exc)) from exc
+    return expression
+
+
 def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
            variables: Mapping[str, ValueExpression] | None = None) -> ValueExpression:
     kind, args = _node(ast, "value")
@@ -163,7 +177,7 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
     if kind == "Property":
         prop = args.get("name")
         _require(isinstance(prop, str) and bool(prop), "Property.name must be a string")
-        return PropertyAccess(_value(args.get("this"), state, variables=variables), prop)
+        return _check_value(PropertyAccess(_value(args.get("this"), state, variables=variables), prop), state)
     if kind in ("String", "StringLiteral"):
         literal = args.get("this")
         _require(isinstance(literal, str), "String literal must contain a string")
@@ -200,9 +214,9 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
         _require(isinstance(name, str) and bool(name), "Parameter requires a name")
         return ParameterReference(name)
     if kind in _ARITHMETIC:
-        return Arithmetic(_ARITHMETIC[kind],
-                          _value(args.get("this"), state, variables=variables),
-                          _value(args.get("expression"), state, variables=variables))
+        return _check_value(Arithmetic(_ARITHMETIC[kind],
+                          _value(args.get("this"), state, aggregate=aggregate, variables=variables),
+                          _value(args.get("expression"), state, aggregate=aggregate, variables=variables)), state)
     if kind == "FunctionCall":
         name = args.get("name")
         _require(isinstance(name, str) and bool(name), "FunctionCall requires a name")
@@ -229,7 +243,8 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
             return AggregateCall(name_lower, arg, distinct=bool(distinct))
         if args.get("distinct") not in (None, False):
             _unsupported("DISTINCT on scalar function", name)
-        return FunctionCall(name, tuple(_value(a, state, variables=variables) for a in raw_arguments))
+        return _check_value(FunctionCall(name, tuple(_value(a, state, aggregate=aggregate, variables=variables)
+                                               for a in raw_arguments)), state)
     _unsupported("Value AST type", kind)
 
 
@@ -275,10 +290,6 @@ def _property_predicates(properties: Any, symbol, state: SymbolicState) -> tuple
     return tuple(results)
 
 
-def _all(conditions: list[Predicate]) -> Predicate | None:
-    if not conditions:
-        return None
-    return conditions[0] if len(conditions) == 1 else AllOf(tuple(conditions))
 
 
 def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicState:
@@ -298,7 +309,6 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
     bindings = _scope(state)
     nodes: list[NodeRequirement] = []
     relationships: list[RelationshipRequirement] = []
-    predicates: list[Predicate] = []
     reserved_nodes: set[str] = set()
     reserved_rels: set[str] = set()
 
@@ -309,8 +319,10 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
         name = _identifier(var_ast, "NodePattern.variable") if var_ast is not None else None
         if name is not None and name in bindings:
             symbol = bindings[name].symbol
-            if not isinstance(symbol, NodeSymbol):
-                raise TransformError(f"Variable {name!r} is already bound to a non-node")
+            if bindings[name].value_kind != "NODE":
+                raise UnsupportedCypherError(
+                    f"Variable {name!r} is not known to be node-valued"
+                )
         else:
             symbol = _fresh_symbol(state, name, relationship=False, reserved=reserved_nodes)
             if name is not None:
@@ -333,7 +345,7 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
         if node_args.get("where") is not None:
             required += (_predicate(node_args["where"], state_in_scope),)
         nodes.append(NodeRequirement(symbol, labels_tuple, required))
-        predicates.extend(required)
+
         return symbol
 
     def bind_relationship(ast: Any, left: NodeSymbol, right: NodeSymbol) -> None:
@@ -355,8 +367,10 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
         name = _identifier(var_ast, "RelationshipPattern.variable") if var_ast is not None else None
         if name is not None and name in bindings:
             symbol = bindings[name].symbol
-            if not isinstance(symbol, RelationshipSymbol):
-                raise TransformError(f"Variable {name!r} is already bound to a non-relationship")
+            if bindings[name].value_kind != "RELATIONSHIP":
+                raise UnsupportedCypherError(
+                    f"Variable {name!r} is not known to be relationship-valued"
+                )
         else:
             symbol = _fresh_symbol(state, name, relationship=True, reserved=reserved_rels)
             if name is not None:
@@ -367,7 +381,7 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
             required += (_predicate(rel_args["where"], state_in_scope),)
         relationships.append(RelationshipRequirement(symbol, left, right,
                                                      tuple(types), direction, required))
-        predicates.extend(required)
+
 
     for path in paths:
         path_kind, path_args = _node(path, "PathPattern")
@@ -390,33 +404,27 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
             bind_relationship(elements[i], left, right)
             left = right
 
-    # Default relationship uniqueness applies across all patterns in this MATCH.
-    for a, b in combinations(relationships, 2):
-        predicates.append(Comparison(
-            "<>", SymbolReference(a.symbol), SymbolReference(b.symbol)
-        ))
-
-    scoped = replace(state, scope=tuple(bindings.values()))
-    if args.get("where") is not None:
-        predicates.append(_predicate(args["where"], scoped))
+    # Structural requirements (including property maps and inline pattern WHERE)
+    # belong only to MatchBag. Its relationship occurrences must be pairwise
+    # distinct within this MATCH (Cypher 25 default DIFFERENT RELATIONSHIPS).
+    # WHERE and type inference must see labels introduced by *this* MATCH.
+    # The previous state graph does not yet contain these new pattern requirements.
+    scoped = replace(state, scope=tuple(bindings.values()),
+                     graph=state.graph.advance(nodes=nodes, relationships=relationships))
     bag = MatchBag(state.bag, tuple(nodes), tuple(relationships))
-    condition = _all(predicates)
-    if condition is not None:
-        bag = FilterBag(bag, condition)
-    return replace(scoped, bag=bag, graph=state.graph.advance(
-        nodes=nodes, relationships=relationships,
-    ))
+    if args.get("where") is not None:
+        bag = FilterBag(bag, _predicate(args["where"], scoped))
+    return replace(scoped, bag=bag)
 
 
-def _default_alias(ast: Any) -> str | None:
-    """Only a bare identifier supplies an implicit variable name.
-
-    For other unaliased expressions, retain the expression and output position
-    instead of inventing an incorrect column header.
-    """
+def _default_alias(ast: Any, *, with_clause: bool) -> str | None:
     kind, _ = _node(ast, "projection")
-    return _identifier(ast, "projection") if kind == "Identifier" else None
-
+    if kind == "Identifier":
+        return _identifier(ast, "projection")
+    if with_clause:
+        raise TransformError("Computed WITH expressions require AS alias")
+    # RETURN without AS is a positional output; preserve source rendering later.
+    return None
 
 
 def _bag_depth(bag) -> int:
@@ -426,33 +434,144 @@ def _bag_depth(bag) -> int:
         bag = bag.source
     return depth
 
-
-def _projection_items(state: SymbolicState, items: Any):
-    _require(isinstance(items, list) and bool(items), "Projection requires a nonempty expressions list")
+def _projection_items(state: SymbolicState, items: Any, *, with_clause: bool):
+    _require(isinstance(items, list) and bool(items), "Projection requires nonempty expressions")
     projections: list[Projection] = []
     bindings: list[Binding] = []
-    aggregations: list[Projection] = []
-    groupings: list[Projection] = []
+
     for index, item in enumerate(items):
         kind, args = _node(item, "projection item")
         if kind == "Alias":
             alias = _identifier(args.get("alias"), "projection alias")
             value_ast = args.get("this")
         else:
-            alias = _default_alias(item)
+            alias = _default_alias(item, with_clause=with_clause)
             value_ast = item
         if alias is not None and any(binding.variable == alias for binding in bindings):
             raise TransformError(f"Duplicate projection alias {alias!r}")
         expr = _value(value_ast, state, aggregate=True)
-
-        if isinstance(expr, SymbolReference):
-            out_symbol = expr.symbol
-        else:
-            out_symbol = ScalarSymbol(f"\x00computed:{_bag_depth(state.bag)}:{index}")
-        projections.append(Projection(alias, expr, out_symbol))
+        try:
+            value_type = infer_type(expr, state)
+        except (CypherTypeError, UnsupportedFunctionError) as exc:
+            raise UnsupportedCypherError(str(exc)) from exc
+        out_symbol = (expr.symbol if isinstance(expr, SymbolReference)
+                      else ValueSymbol(f"\x00computed:{_bag_depth(state.bag)}:{index}"))
+        projections.append(Projection(alias, expr, out_symbol, value_type))
         if alias is not None:
-        bindings.append(Binding(alias, out_symbol))
+            bindings.append(Binding(alias, out_symbol, value_type))
     return tuple(projections), tuple(bindings)
+
+
+def _group_keys(state: SymbolicState, group_by: Any,
+                columns: tuple[Projection, ...]) -> tuple[GroupKey, ...]:
+    """Normalize implicit and explicit GROUP BY into the same input-row keys."""
+    implicit = tuple(c for c in columns if not contains_aggregate(c.expression))
+    if group_by is None:
+        return tuple(GroupKey(c.expression, c.symbol) for c in implicit)
+    if isinstance(group_by, dict):
+        kind, args = _node(group_by, "GROUP BY")
+        if kind not in ("Group", "GroupBy"):
+            raise UnsupportedCypherError(f"Unrecognized GROUP BY AST node: {kind}")
+        _reject_unknown(args, {"expressions", "all"}, "GROUP BY")
+        if args.get("all") is True:
+            return tuple(GroupKey(c.expression, c.symbol) for c in implicit)
+        expressions = args.get("expressions")
+    elif isinstance(group_by, list):
+        expressions = group_by
+    else:
+        raise UnsupportedCypherError(f"Unsupported GROUP BY representation: {group_by!r}")
+    _require(isinstance(expressions, list), "GROUP BY expressions must be a list")
+    aliases = {c.alias: c for c in columns if c.alias is not None}
+    keys: list[GroupKey] = []
+    for idx, group_ast in enumerate(expressions):
+        if _node(group_ast, "grouping expression")[0] == "Identifier":
+            identifier = _identifier(group_ast, "grouping identifier")
+            if identifier in aliases:
+                expression = aliases[identifier].expression
+            else:
+                expression = _value(group_ast, state)
+        else:
+            expression = _value(group_ast, state)
+        if contains_aggregate(expression):
+            raise TransformError("A grouping key must not contain aggregation")
+        existing = next((c.symbol for c in columns if c.expression == expression), None)
+        symbol = existing or ValueSymbol(f"\x00group:{_bag_depth(state.bag)}:{idx}")
+        if not any(k.expression == expression for k in keys):
+            keys.append(GroupKey(expression, symbol))
+    return tuple(keys)
+
+
+def _aggregate_bag(source, state: SymbolicState, columns: tuple[Projection, ...],
+                   group_by: Any) -> AggregateBag:
+    keys = _group_keys(state, group_by, columns)
+    grouped = {key.expression: key.symbol for key in keys}
+    aggregations: list[AggregateComputation] = []
+
+    def final_value(expr: ValueExpression) -> ValueExpression:
+        # The key expression is evaluated *before* grouping. All other result
+        # expressions are constructed exclusively from keys and aggregates.
+        if expr in grouped:
+            return SymbolReference(grouped[expr])
+        if isinstance(expr, AggregateCall):
+            if expr.argument is not None and contains_aggregate(expr.argument):
+                raise TransformError("Nested aggregate functions are invalid")
+            symbol = ValueSymbol(f"\x00aggregate:{_bag_depth(state.bag)}:{len(aggregations)}")
+            aggregations.append(AggregateComputation(expr, symbol))
+            return SymbolReference(symbol)
+        if isinstance(expr, (ValueLiteral, ParameterReference)):
+            return expr
+        if isinstance(expr, Arithmetic):
+            return Arithmetic(expr.operator, final_value(expr.left), final_value(expr.right))
+        if isinstance(expr, FunctionCall):
+            return FunctionCall(expr.name, tuple(final_value(a) for a in expr.arguments))
+        if isinstance(expr, PropertyAccess):
+            return PropertyAccess(final_value(expr.owner), expr.property_name)
+        if isinstance(expr, SymbolReference):
+            raise TransformError(f"Non-grouping variable in aggregation: {expr.symbol.name!r}")
+        raise UnsupportedCypherError(f"Unsupported aggregate result expression: {expr!r}")
+
+    resolved = tuple(Projection(c.alias, final_value(c.expression), c.symbol, c.value_type)
+                     for c in columns)
+    return AggregateBag(source, keys, tuple(aggregations), resolved)
+
+
+def _sort_spec(order_ast: Any, state: SymbolicState) -> tuple[SortKey, ...]:
+    """Accept the conventional serialized Order/Ordered nodes, reject unknowns."""
+    kind, args = _node(order_ast, "ORDER BY")
+    if kind not in ("Order", "OrderBy"):
+        raise UnsupportedCypherError(f"Unsupported ORDER BY AST node: {kind}")
+    _reject_unknown(args, {"expressions"}, "ORDER BY")
+    items = args.get("expressions")
+    _require(isinstance(items, list) and bool(items), "ORDER BY needs sort keys")
+    result = []
+    for item in items:
+        item_kind, item_args = _node(item, "ORDER BY item")
+        if item_kind in ("Ordered", "SortItem"):
+            _reject_unknown(item_args, {"this", "desc", "descending", "nulls_first"}, "sort item")
+            if item_args.get("nulls_first") is not None:
+                raise UnsupportedCypherError("Explicit NULLS FIRST/LAST not implemented")
+            expr_ast = item_args.get("this")
+            raw_desc = item_args.get("descending", item_args.get("desc", False))
+            _require(isinstance(raw_desc, bool), "Sort direction must be boolean")
+            descending = raw_desc
+        else:
+            expr_ast, descending = item, False
+        result.append(SortKey(_value(expr_ast, state), descending))
+    return tuple(result)
+
+
+def _page_value(ast: Any, state: SymbolicState, context: str) -> ValueExpression | None:
+    if ast is None:
+        return None
+    if isinstance(ast, dict) and ast.get("type") in ("Skip", "Limit", "Offset"):
+        _, args = _node(ast, context)
+        ast = args.get("expression", args.get("this"))
+    value = _value(ast, state)
+    if not isinstance(value, (ValueLiteral, ParameterReference)):
+        raise UnsupportedCypherError(f"{context} supports literal/parameter bounds only for now")
+    if isinstance(value, ValueLiteral) and (type(value.value) is not int or value.value < 0):
+        raise TransformError(f"{context} requires a nonnegative integer")
+    return value
 
 
 def _names_referenced(ast: Any) -> set[str]:
@@ -472,50 +591,65 @@ def _project_clause(state: SymbolicState, clause: dict[str, Any], *, with_clause
     _require(kind == expected, f"Expected {expected}, got {kind!r}")
     _reject_unknown(args, {"expressions", "distinct", "where", "order", "skip",
                            "limit", "group_by"}, expected)
-    for modifier in ("order", "skip", "limit", "group_by"):
-        if args.get(modifier) is not None:
-            _unsupported(f"{expected}.{modifier}", args[modifier])
-    distinct = args.get("distinct")
-    _require(distinct is None or isinstance(distinct, bool), "DISTINCT must be boolean or null")
     if not with_clause and args.get("where") is not None:
         _unsupported("RETURN WHERE", args["where"])
-
-    columns, bindings = _projection_items(state, args.get("expressions"))
-    has_aggregates = any(isinstance(c.expression, AggregateCall) for c in columns)
+    distinct = args.get("distinct")
+    _require(distinct is None or isinstance(distinct, bool), "DISTINCT must be boolean or null")
+    columns, bindings = _projection_items(state, args.get("expressions"), with_clause=with_clause)
+    has_aggregation = any(contains_aggregate(c.expression) for c in columns)
+    group_by = args.get("group_by")
+    grouped = has_aggregation or group_by is not None
     where = args.get("where") if with_clause else None
-    exported_names = {b.variable for b in bindings}
-    uses_hidden_input = where is not None and bool(_names_referenced(where) - exported_names)
+    order = args.get("order")
+    exported = {b.variable for b in bindings}
+    hidden_in_where = where is not None and bool(_names_referenced(where) - exported)
+    hidden_in_order = order is not None and bool(_names_referenced(order) - exported)
+    projected_state = replace(state, scope=bindings)
 
-    if has_aggregates:
-        # Aggregation doesn't retain arbitrary source rows; a grouped WHERE
-        # cannot refer to their non-projected bindings without added semantics.
-        if uses_hidden_input:
+    if grouped:
+        if hidden_in_where or hidden_in_order:
+            raise UnsupportedCypherError("Grouped queries cannot reference discarded input variables")
+        bag = _aggregate_bag(state.bag, state, columns, group_by)
+        if distinct:
+            bag = DistinctBag(bag)
+        if where is not None:
+            bag = FilterBag(bag, _predicate(where, projected_state))
+        if order is not None:
+            bag = SortBag(bag, _sort_spec(order, projected_state))
+    elif hidden_in_where or hidden_in_order:
+        if distinct:
             raise UnsupportedCypherError(
-                "WITH WHERE refers to non-projected input after aggregation"
+                "WITH DISTINCT cannot reference discarded variables in WHERE/ORDER BY"
             )
-        bag = AggregateBag(state.bag, columns)
-    elif uses_hidden_input:
-        # Compute aliases ONCE, keeping input symbols until the WHERE is applied.
-        extended = ExtendBag(state.bag, columns)
-        combined = {b.variable: b for b in state.scope}
-        combined.update({b.variable: b for b in bindings})  # New aliases shadow old names.
+        # Compute aliases once, retaining non-exported input symbols until the
+        # WHERE and any hidden-variable ORDER BY have been evaluated.
+        bag = ExtendBag(state.bag, columns)
+        combined = _scope(state)
+        combined.update(_scope(projected_state))
         extended_state = replace(state, scope=tuple(combined.values()))
-        predicate = _predicate(where, extended_state)
-        # Project from the materialized results, not from original expressions:
-        # this avoids duplicating nondeterministic function calls such as rand().
-        exposed = tuple(Projection(c.alias, SymbolReference(c.symbol), c.symbol) for c in columns)
-        bag = ProjectBag(FilterBag(extended, predicate), exposed)
+        if where is not None:
+            bag = FilterBag(bag, _predicate(where, extended_state))
+        if hidden_in_order:
+            bag = SortBag(bag, _sort_spec(order, extended_state))
+        copied = tuple(Projection(c.alias, SymbolReference(c.symbol), c.symbol, c.value_type)
+                       for c in columns)
+        bag = ProjectBag(bag, copied)
+        if order is not None and not hidden_in_order:
+            bag = SortBag(bag, _sort_spec(order, projected_state))
     else:
         bag = ProjectBag(state.bag, columns)
-
     if distinct:
         bag = DistinctBag(bag)
+        if where is not None:
+            bag = FilterBag(bag, _predicate(where, projected_state))
+        if order is not None:
+            bag = SortBag(bag, _sort_spec(order, projected_state))
 
-    result = replace(state, bag=bag, scope=bindings, graph=state.graph.advance())
-    if where is not None and (has_aggregates or not uses_hidden_input):
-        result = replace(result, bag=FilterBag(result.bag, _predicate(where, result)))
-    return result
-
+    if args.get("skip") is not None or args.get("limit") is not None:
+        bag = SliceBag(bag,
+                       _page_value(args.get("skip"), projected_state, "SKIP"),
+                       _page_value(args.get("limit"), projected_state, "LIMIT"))
+    return replace(state, bag=bag, scope=bindings, graph=state.graph.advance())
 
 
 def transform_with(state: SymbolicState, clause: dict[str, Any]) -> SymbolicState:
