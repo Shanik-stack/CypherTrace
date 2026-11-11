@@ -11,6 +11,7 @@ from graph_query_analysis.model import AnalysisRequest, SymbolicState, UnitBag
 from graph_query_analysis.transforms import TransformError, UnsupportedCypherError, transform_clause
 from graph_query_analysis.graph import GraphSnapshot
 
+
 def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
     """Return the initial state followed by the state after each clause.
 
@@ -44,6 +45,7 @@ def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
         raise UnsupportedCypherError("Only queries ending in RETURN are supported")
 
     return tuple(states)
+
 
 if __name__ == "__main__":
     from pathlib import Path

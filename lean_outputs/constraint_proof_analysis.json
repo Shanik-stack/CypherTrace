@@ -1,0 +1,1161 @@
+[
+  {
+    "clauses": [
+      {
+        "clause": "MATCH",
+        "paths": [
+          {
+            "hops": [],
+            "nodes": [
+              {
+                "labels": {
+                  "Person": "listed"
+                },
+                "property_constraints": [],
+                "variable": "n"
+              }
+            ]
+          }
+        ],
+        "where": {
+          "literal": false
+        }
+      },
+      {
+        "clause": "RETURN",
+        "columns": [
+          {
+            "expression": {
+              "variable": "n"
+            },
+            "name": "n"
+          }
+        ],
+        "distinct": false
+      }
+    ],
+    "proof_goals": [
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "kind": "all_different_relationship_bindings",
+            "names": []
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "reason": "no_supported_contradiction",
+        "stage_id": 1,
+        "status": "unknown"
+      },
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "kind": "closed_predicate_cannot_pass"
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 2,
+        "status": "proved"
+      }
+    ],
+    "proved_findings": [
+      {
+        "applies_to": "query_result",
+        "claim": "Each result row has one consistent derivation through all ordered clauses.",
+        "kind": "result_row_derivation",
+        "proof_rule": "Cypher.Plan.eval_result_origin"
+      },
+      {
+        "applies_to": "query_result",
+        "claim": "On success, the result has exactly the multiplicities given by the ordered clause rules.",
+        "distinct_rule": "keep_first_representative_at_each_distinct_stage",
+        "kind": "result_bag_multiplicity",
+        "proof_rule": "Cypher.Plan.eval_result_bag",
+        "symbolic_proof_rule": "Cypher.Plan.symbolic_result_bag"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality_rule": "sum_over_input_occurrences",
+        "claim": "Each surviving row occurrence extends one input occurrence and witnesses every path in this MATCH.",
+        "clause_index": 0,
+        "count_proof_rule": "Cypher.BagSemantics.matchClause_count",
+        "kind": "mandatory_match",
+        "path_requirement": "all_paths_for_each_contribution",
+        "proof_rule": "Cypher.matchClause_sound",
+        "relationship_ids_distinct_within_clause": true,
+        "relationship_occurrences": 0,
+        "required_paths": 1,
+        "reused_input_bindings": [],
+        "where_must_pass": true,
+        "witness_multiplicity": "once_per_legal_witness_per_input_occurrence",
+        "witness_proof_rule": "Cypher.BagSemantics.witnessEnumeration"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality": "exactly_input_rows_on_success",
+        "claim": "Each input row produces one projected row on success.",
+        "clause_index": 1,
+        "columns": [
+          "n"
+        ],
+        "kind": "projection",
+        "proof_rule": "Cypher.ScopedProjection.evalRows_sound"
+      },
+      {
+        "applies_to": "clause_predicate",
+        "claim": "This WHERE predicate cannot evaluate to true for any input row.",
+        "clause_index": 0,
+        "kind": "no_row_can_pass_where",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 2
+      },
+      {
+        "applies_to": "query_result",
+        "blocking_clause_index": 0,
+        "blocking_stage_id": 2,
+        "claim": "A proved empty symbolic stage forces the terminal row bag to be empty on success.",
+        "kind": "no_result_rows_on_success",
+        "proof_rule": "Cypher.Plan.noResultRows_of_symbolicEmpty"
+      }
+    ],
+    "request_id": "query_0",
+    "result_proof_coverage": "row_result",
+    "schema_assumptions": {
+      "required_properties": []
+    },
+    "schema_assumptions_used": [],
+    "schema_interpretation": "observational",
+    "symbolic_bag": {
+      "result": {
+        "bag": 3,
+        "kind": "row_result"
+      },
+      "stages": [
+        {
+          "id": 0,
+          "operation": {
+            "kind": "singleton_empty_row"
+          },
+          "scope": []
+        },
+        {
+          "clause_index": 0,
+          "id": 1,
+          "input": 0,
+          "operation": {
+            "all_different_relationships": [],
+            "kind": "extend_witnesses",
+            "paths": [
+              {
+                "start": {
+                  "binding": "n",
+                  "labels": [
+                    "Person"
+                  ],
+                  "properties": {},
+                  "witness": "p0.n0"
+                },
+                "steps": []
+              }
+            ]
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 0,
+          "id": 2,
+          "input": 1,
+          "operation": {
+            "kind": "filter_where_true",
+            "predicate": {
+              "literal": false
+            }
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 1,
+          "id": 3,
+          "input": 2,
+          "operation": {
+            "columns": [
+              {
+                "expression": {
+                  "variable": "n"
+                },
+                "name": "n"
+              }
+            ],
+            "kind": "project"
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "clauses": [
+      {
+        "clause": "MATCH",
+        "paths": [
+          {
+            "hops": [],
+            "nodes": [
+              {
+                "labels": {
+                  "Person": "listed"
+                },
+                "property_constraints": [],
+                "variable": "n"
+              }
+            ]
+          }
+        ],
+        "where": {
+          "arguments": [
+            {
+              "arguments": [
+                {
+                  "owner": "n",
+                  "property": {
+                    "by_label_or_type": {
+                      "Person": []
+                    },
+                    "key": "age",
+                    "listed_types": [],
+                    "status": "not_listed"
+                  }
+                },
+                {
+                  "literal": 30
+                }
+              ],
+              "operator": "Cypher.BinaryOp.gt"
+            },
+            {
+              "arguments": [
+                {
+                  "owner": "n",
+                  "property": {
+                    "by_label_or_type": {
+                      "Person": []
+                    },
+                    "key": "age",
+                    "listed_types": [],
+                    "status": "not_listed"
+                  }
+                },
+                {
+                  "literal": 20
+                }
+              ],
+              "operator": "Cypher.BinaryOp.lt"
+            }
+          ],
+          "operator": "Cypher.BinaryOp.and"
+        }
+      },
+      {
+        "clause": "WITH",
+        "columns": [
+          {
+            "expression": {
+              "variable": "n"
+            },
+            "name": "n"
+          }
+        ],
+        "distinct": false
+      },
+      {
+        "clause": "MATCH",
+        "paths": [
+          {
+            "hops": [],
+            "nodes": [
+              {
+                "labels": {},
+                "property_constraints": [],
+                "variable": "m"
+              }
+            ]
+          }
+        ],
+        "where": null
+      },
+      {
+        "clause": "RETURN",
+        "columns": [
+          {
+            "expression": {
+              "variable": "m"
+            },
+            "name": "m"
+          }
+        ],
+        "distinct": false
+      }
+    ],
+    "proof_goals": [
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "kind": "all_different_relationship_bindings",
+            "names": []
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "reason": "no_supported_contradiction",
+        "stage_id": 1,
+        "status": "unknown"
+      },
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "comparison": ">",
+            "endpoint": 30,
+            "kind": "integer_endpoint_bound",
+            "subject": {
+              "owner": "n",
+              "property": "age"
+            }
+          },
+          {
+            "comparison": "<",
+            "endpoint": 20,
+            "kind": "integer_endpoint_bound",
+            "subject": {
+              "owner": "n",
+              "property": "age"
+            }
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 2,
+        "status": "proved"
+      },
+      {
+        "clause_index": 2,
+        "constraints": [
+          {
+            "kind": "all_different_relationship_bindings",
+            "names": []
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "reason": "no_supported_contradiction",
+        "stage_id": 4,
+        "status": "unknown"
+      }
+    ],
+    "proved_findings": [
+      {
+        "applies_to": "query_result",
+        "claim": "Each result row has one consistent derivation through all ordered clauses.",
+        "kind": "result_row_derivation",
+        "proof_rule": "Cypher.Plan.eval_result_origin"
+      },
+      {
+        "applies_to": "query_result",
+        "claim": "On success, the result has exactly the multiplicities given by the ordered clause rules.",
+        "distinct_rule": "keep_first_representative_at_each_distinct_stage",
+        "kind": "result_bag_multiplicity",
+        "proof_rule": "Cypher.Plan.eval_result_bag",
+        "symbolic_proof_rule": "Cypher.Plan.symbolic_result_bag"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality_rule": "sum_over_input_occurrences",
+        "claim": "Each surviving row occurrence extends one input occurrence and witnesses every path in this MATCH.",
+        "clause_index": 0,
+        "count_proof_rule": "Cypher.BagSemantics.matchClause_count",
+        "kind": "mandatory_match",
+        "path_requirement": "all_paths_for_each_contribution",
+        "proof_rule": "Cypher.matchClause_sound",
+        "relationship_ids_distinct_within_clause": true,
+        "relationship_occurrences": 0,
+        "required_paths": 1,
+        "reused_input_bindings": [],
+        "where_must_pass": true,
+        "witness_multiplicity": "once_per_legal_witness_per_input_occurrence",
+        "witness_proof_rule": "Cypher.BagSemantics.witnessEnumeration"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality": "exactly_input_rows_on_success",
+        "claim": "Each input row produces one projected row on success.",
+        "clause_index": 1,
+        "columns": [
+          "n"
+        ],
+        "kind": "projection",
+        "names_removed_from_scope": [],
+        "proof_rule": "Cypher.ScopedProjection.evalRows_sound"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality_rule": "sum_over_input_occurrences",
+        "claim": "Each surviving row occurrence extends one input occurrence and witnesses every path in this MATCH.",
+        "clause_index": 2,
+        "count_proof_rule": "Cypher.BagSemantics.matchClause_count",
+        "kind": "mandatory_match",
+        "path_requirement": "all_paths_for_each_contribution",
+        "proof_rule": "Cypher.matchClause_sound",
+        "relationship_ids_distinct_within_clause": true,
+        "relationship_occurrences": 0,
+        "required_paths": 1,
+        "reused_input_bindings": [],
+        "where_must_pass": false,
+        "witness_multiplicity": "once_per_legal_witness_per_input_occurrence",
+        "witness_proof_rule": "Cypher.BagSemantics.witnessEnumeration"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality": "exactly_input_rows_on_success",
+        "claim": "Each input row produces one projected row on success.",
+        "clause_index": 3,
+        "columns": [
+          "m"
+        ],
+        "kind": "projection",
+        "proof_rule": "Cypher.ScopedProjection.evalRows_sound"
+      },
+      {
+        "applies_to": "clause_predicate",
+        "claim": "This WHERE predicate cannot evaluate to true for any input row.",
+        "clause_index": 0,
+        "kind": "no_row_can_pass_where",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 2
+      },
+      {
+        "applies_to": "query_result",
+        "blocking_clause_index": 0,
+        "blocking_stage_id": 2,
+        "claim": "A proved empty symbolic stage forces the terminal row bag to be empty on success.",
+        "kind": "no_result_rows_on_success",
+        "proof_rule": "Cypher.Plan.noResultRows_of_symbolicEmpty"
+      }
+    ],
+    "request_id": "query_1",
+    "result_proof_coverage": "row_result",
+    "schema_assumptions": {
+      "required_properties": []
+    },
+    "schema_assumptions_used": [],
+    "schema_interpretation": "observational",
+    "symbolic_bag": {
+      "result": {
+        "bag": 5,
+        "kind": "row_result"
+      },
+      "stages": [
+        {
+          "id": 0,
+          "operation": {
+            "kind": "singleton_empty_row"
+          },
+          "scope": []
+        },
+        {
+          "clause_index": 0,
+          "id": 1,
+          "input": 0,
+          "operation": {
+            "all_different_relationships": [],
+            "kind": "extend_witnesses",
+            "paths": [
+              {
+                "start": {
+                  "binding": "n",
+                  "labels": [
+                    "Person"
+                  ],
+                  "properties": {},
+                  "witness": "p0.n0"
+                },
+                "steps": []
+              }
+            ]
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 0,
+          "id": 2,
+          "input": 1,
+          "operation": {
+            "kind": "filter_where_true",
+            "predicate": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "owner": "n",
+                      "property": "age"
+                    },
+                    {
+                      "literal": 30
+                    }
+                  ],
+                  "operator": "Cypher.BinaryOp.gt"
+                },
+                {
+                  "arguments": [
+                    {
+                      "owner": "n",
+                      "property": "age"
+                    },
+                    {
+                      "literal": 20
+                    }
+                  ],
+                  "operator": "Cypher.BinaryOp.lt"
+                }
+              ],
+              "operator": "Cypher.BinaryOp.and"
+            }
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 1,
+          "id": 3,
+          "input": 2,
+          "operation": {
+            "columns": [
+              {
+                "expression": {
+                  "variable": "n"
+                },
+                "name": "n"
+              }
+            ],
+            "kind": "project"
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 2,
+          "id": 4,
+          "input": 3,
+          "operation": {
+            "all_different_relationships": [],
+            "kind": "extend_witnesses",
+            "paths": [
+              {
+                "start": {
+                  "binding": "m",
+                  "labels": [],
+                  "properties": {},
+                  "witness": "p0.n0"
+                },
+                "steps": []
+              }
+            ]
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "m"
+            },
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 3,
+          "id": 5,
+          "input": 4,
+          "operation": {
+            "columns": [
+              {
+                "expression": {
+                  "variable": "m"
+                },
+                "name": "m"
+              }
+            ],
+            "kind": "project"
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "m"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "clauses": [
+      {
+        "clause": "MATCH",
+        "paths": [
+          {
+            "hops": [
+              {
+                "direction": "outgoing",
+                "matching_schema_signatures": [],
+                "property_constraints": [],
+                "topology_status": "not_listed",
+                "types": {
+                  "R": "not_listed"
+                },
+                "variable": "r"
+              }
+            ],
+            "nodes": [
+              {
+                "labels": {},
+                "property_constraints": [],
+                "variable": null
+              },
+              {
+                "labels": {},
+                "property_constraints": [],
+                "variable": null
+              }
+            ]
+          },
+          {
+            "hops": [
+              {
+                "direction": "outgoing",
+                "matching_schema_signatures": [],
+                "property_constraints": [],
+                "topology_status": "not_listed",
+                "types": {
+                  "R": "not_listed"
+                },
+                "variable": "r"
+              }
+            ],
+            "nodes": [
+              {
+                "labels": {},
+                "property_constraints": [],
+                "variable": null
+              },
+              {
+                "labels": {},
+                "property_constraints": [],
+                "variable": null
+              }
+            ]
+          }
+        ],
+        "where": null
+      },
+      {
+        "clause": "RETURN",
+        "columns": [
+          {
+            "expression": {
+              "variable": "r"
+            },
+            "name": "r"
+          }
+        ],
+        "distinct": false
+      }
+    ],
+    "proof_goals": [
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "kind": "all_different_relationship_bindings",
+            "names": [
+              "r",
+              "r"
+            ]
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 1,
+        "status": "proved"
+      }
+    ],
+    "proved_findings": [
+      {
+        "applies_to": "query_result",
+        "claim": "Each result row has one consistent derivation through all ordered clauses.",
+        "kind": "result_row_derivation",
+        "proof_rule": "Cypher.Plan.eval_result_origin"
+      },
+      {
+        "applies_to": "query_result",
+        "claim": "On success, the result has exactly the multiplicities given by the ordered clause rules.",
+        "distinct_rule": "keep_first_representative_at_each_distinct_stage",
+        "kind": "result_bag_multiplicity",
+        "proof_rule": "Cypher.Plan.eval_result_bag",
+        "symbolic_proof_rule": "Cypher.Plan.symbolic_result_bag"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality_rule": "sum_over_input_occurrences",
+        "claim": "Each surviving row occurrence extends one input occurrence and witnesses every path in this MATCH.",
+        "clause_index": 0,
+        "count_proof_rule": "Cypher.BagSemantics.matchClause_count",
+        "kind": "mandatory_match",
+        "path_requirement": "all_paths_for_each_contribution",
+        "proof_rule": "Cypher.matchClause_sound",
+        "relationship_ids_distinct_within_clause": true,
+        "relationship_occurrences": 2,
+        "required_paths": 2,
+        "reused_input_bindings": [],
+        "where_must_pass": false,
+        "witness_multiplicity": "once_per_legal_witness_per_input_occurrence",
+        "witness_proof_rule": "Cypher.BagSemantics.witnessEnumeration"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality": "exactly_input_rows_on_success",
+        "claim": "Each input row produces one projected row on success.",
+        "clause_index": 1,
+        "columns": [
+          "r"
+        ],
+        "kind": "projection",
+        "proof_rule": "Cypher.ScopedProjection.evalRows_sound"
+      },
+      {
+        "applies_to": "clause_output",
+        "claim": "The symbolic stage has no legal witness for any input occurrence.",
+        "clause_index": 0,
+        "kind": "no_stage_rows_on_success",
+        "proof_rule": "Cypher.BagOperator.empty_of_constraints",
+        "stage_id": 1
+      },
+      {
+        "applies_to": "query_result",
+        "blocking_clause_index": 0,
+        "blocking_stage_id": 1,
+        "claim": "A proved empty symbolic stage forces the terminal row bag to be empty on success.",
+        "kind": "no_result_rows_on_success",
+        "proof_rule": "Cypher.Plan.noResultRows_of_symbolicEmpty"
+      }
+    ],
+    "request_id": "query_2",
+    "result_proof_coverage": "row_result",
+    "schema_assumptions": {
+      "required_properties": []
+    },
+    "schema_assumptions_used": [],
+    "schema_interpretation": "observational",
+    "symbolic_bag": {
+      "result": {
+        "bag": 2,
+        "kind": "row_result"
+      },
+      "stages": [
+        {
+          "id": 0,
+          "operation": {
+            "kind": "singleton_empty_row"
+          },
+          "scope": []
+        },
+        {
+          "clause_index": 0,
+          "id": 1,
+          "input": 0,
+          "operation": {
+            "all_different_relationships": [
+              "p0.r0",
+              "p1.r0"
+            ],
+            "kind": "extend_witnesses",
+            "paths": [
+              {
+                "start": {
+                  "binding": null,
+                  "labels": [],
+                  "properties": {},
+                  "witness": "p0.n0"
+                },
+                "steps": [
+                  {
+                    "node": {
+                      "binding": null,
+                      "labels": [],
+                      "properties": {},
+                      "witness": "p0.n1"
+                    },
+                    "relationship": {
+                      "binding": "r",
+                      "direction": "outgoing",
+                      "from": "p0.n0",
+                      "properties": {},
+                      "to": "p0.n1",
+                      "types": [
+                        "R"
+                      ],
+                      "witness": "p0.r0"
+                    }
+                  }
+                ]
+              },
+              {
+                "start": {
+                  "binding": null,
+                  "labels": [],
+                  "properties": {},
+                  "witness": "p1.n0"
+                },
+                "steps": [
+                  {
+                    "node": {
+                      "binding": null,
+                      "labels": [],
+                      "properties": {},
+                      "witness": "p1.n1"
+                    },
+                    "relationship": {
+                      "binding": "r",
+                      "direction": "outgoing",
+                      "from": "p1.n0",
+                      "properties": {},
+                      "to": "p1.n1",
+                      "types": [
+                        "R"
+                      ],
+                      "witness": "p1.r0"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "scope": [
+            {
+              "kind": "relationship",
+              "name": "r"
+            }
+          ]
+        },
+        {
+          "clause_index": 1,
+          "id": 2,
+          "input": 1,
+          "operation": {
+            "columns": [
+              {
+                "expression": {
+                  "variable": "r"
+                },
+                "name": "r"
+              }
+            ],
+            "kind": "project"
+          },
+          "scope": [
+            {
+              "kind": "relationship",
+              "name": "r"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "clauses": [
+      {
+        "clause": "MATCH",
+        "paths": [
+          {
+            "hops": [],
+            "nodes": [
+              {
+                "labels": {
+                  "Person": "listed"
+                },
+                "property_constraints": [],
+                "variable": "n"
+              }
+            ]
+          }
+        ],
+        "where": {
+          "arguments": [
+            {
+              "arguments": [
+                {
+                  "owner": "n",
+                  "property": {
+                    "by_label_or_type": {
+                      "Person": []
+                    },
+                    "key": "age",
+                    "listed_types": [],
+                    "status": "not_listed"
+                  }
+                },
+                {
+                  "literal": 30
+                }
+              ],
+              "operator": "Cypher.BinaryOp.gt"
+            },
+            {
+              "arguments": [
+                {
+                  "owner": "n",
+                  "property": {
+                    "by_label_or_type": {
+                      "Person": []
+                    },
+                    "key": "age",
+                    "listed_types": [],
+                    "status": "not_listed"
+                  }
+                },
+                {
+                  "literal": 20
+                }
+              ],
+              "operator": "Cypher.BinaryOp.lt"
+            }
+          ],
+          "operator": "Cypher.BinaryOp.or"
+        }
+      },
+      {
+        "clause": "RETURN",
+        "columns": [
+          {
+            "expression": {
+              "variable": "n"
+            },
+            "name": "n"
+          }
+        ],
+        "distinct": false
+      }
+    ],
+    "proof_goals": [
+      {
+        "clause_index": 0,
+        "constraints": [
+          {
+            "kind": "all_different_relationship_bindings",
+            "names": []
+          }
+        ],
+        "kind": "empty_stage_on_success",
+        "reason": "no_supported_contradiction",
+        "stage_id": 1,
+        "status": "unknown"
+      },
+      {
+        "clause_index": 0,
+        "constraints": [],
+        "kind": "empty_stage_on_success",
+        "reason": "no_supported_contradiction",
+        "stage_id": 2,
+        "status": "unknown"
+      }
+    ],
+    "proved_findings": [
+      {
+        "applies_to": "query_result",
+        "claim": "Each result row has one consistent derivation through all ordered clauses.",
+        "kind": "result_row_derivation",
+        "proof_rule": "Cypher.Plan.eval_result_origin"
+      },
+      {
+        "applies_to": "query_result",
+        "claim": "On success, the result has exactly the multiplicities given by the ordered clause rules.",
+        "distinct_rule": "keep_first_representative_at_each_distinct_stage",
+        "kind": "result_bag_multiplicity",
+        "proof_rule": "Cypher.Plan.eval_result_bag",
+        "symbolic_proof_rule": "Cypher.Plan.symbolic_result_bag"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality_rule": "sum_over_input_occurrences",
+        "claim": "Each surviving row occurrence extends one input occurrence and witnesses every path in this MATCH.",
+        "clause_index": 0,
+        "count_proof_rule": "Cypher.BagSemantics.matchClause_count",
+        "kind": "mandatory_match",
+        "path_requirement": "all_paths_for_each_contribution",
+        "proof_rule": "Cypher.matchClause_sound",
+        "relationship_ids_distinct_within_clause": true,
+        "relationship_occurrences": 0,
+        "required_paths": 1,
+        "reused_input_bindings": [],
+        "where_must_pass": true,
+        "witness_multiplicity": "once_per_legal_witness_per_input_occurrence",
+        "witness_proof_rule": "Cypher.BagSemantics.witnessEnumeration"
+      },
+      {
+        "applies_to": "clause_output",
+        "cardinality": "exactly_input_rows_on_success",
+        "claim": "Each input row produces one projected row on success.",
+        "clause_index": 1,
+        "columns": [
+          "n"
+        ],
+        "kind": "projection",
+        "proof_rule": "Cypher.ScopedProjection.evalRows_sound"
+      }
+    ],
+    "request_id": "query_3",
+    "result_proof_coverage": "row_result",
+    "schema_assumptions": {
+      "required_properties": []
+    },
+    "schema_assumptions_used": [],
+    "schema_interpretation": "observational",
+    "symbolic_bag": {
+      "result": {
+        "bag": 3,
+        "kind": "row_result"
+      },
+      "stages": [
+        {
+          "id": 0,
+          "operation": {
+            "kind": "singleton_empty_row"
+          },
+          "scope": []
+        },
+        {
+          "clause_index": 0,
+          "id": 1,
+          "input": 0,
+          "operation": {
+            "all_different_relationships": [],
+            "kind": "extend_witnesses",
+            "paths": [
+              {
+                "start": {
+                  "binding": "n",
+                  "labels": [
+                    "Person"
+                  ],
+                  "properties": {},
+                  "witness": "p0.n0"
+                },
+                "steps": []
+              }
+            ]
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 0,
+          "id": 2,
+          "input": 1,
+          "operation": {
+            "kind": "filter_where_true",
+            "predicate": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "owner": "n",
+                      "property": "age"
+                    },
+                    {
+                      "literal": 30
+                    }
+                  ],
+                  "operator": "Cypher.BinaryOp.gt"
+                },
+                {
+                  "arguments": [
+                    {
+                      "owner": "n",
+                      "property": "age"
+                    },
+                    {
+                      "literal": 20
+                    }
+                  ],
+                  "operator": "Cypher.BinaryOp.lt"
+                }
+              ],
+              "operator": "Cypher.BinaryOp.or"
+            }
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        },
+        {
+          "clause_index": 1,
+          "id": 3,
+          "input": 2,
+          "operation": {
+            "columns": [
+              {
+                "expression": {
+                  "variable": "n"
+                },
+                "name": "n"
+              }
+            ],
+            "kind": "project"
+          },
+          "scope": [
+            {
+              "kind": "node",
+              "name": "n"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

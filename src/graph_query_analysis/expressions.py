@@ -291,8 +291,26 @@ class FilterBag(BagExpression):
 class Projection:
     """One output column: evaluate an expression and expose it as alias."""
 
-    alias: str
+    The optional alias is the Cypher variable name, not an invented display
+    header. Unaliased expressions still have a well-defined value and position.
+    """
+
+    alias: str | None
     expression: ValueExpression
+    symbol: Symbol
+
+
+@dataclass(frozen=True)
+class ExtendBag(BagExpression):
+    """Evaluate projections once while retaining the incoming bindings.
+
+    Used by WITH ... WHERE when the WHERE predicate needs both newly computed
+    aliases and input variables that WITH will later remove. ProjectBag then
+    discards the hidden input bindings.
+    """
+
+    source: BagExpression
+    columns: tuple[Projection, ...]
 
 
 @dataclass(frozen=True)
@@ -315,13 +333,21 @@ class DistinctBag(BagExpression):
 
 @dataclass(frozen=True)
 class AggregateBag(BagExpression):
-    """Group input bindings and compute aggregate projections.
+    """Group and aggregate, preserving the original output-column order.
 
-    When `grouping=()`, this is a global aggregation producing one result row
-    even when source is empty (e.g. AVG then yields null). AggregateCall
-    semantics, including DISTINCT arguments and nulls, are defined later.
+    With no grouping expressions, global aggregation yields one result row
+    even for empty input. The mathematical semantics are defined separately.
     """
 
     source: BagExpression
-    grouping: tuple[Projection, ...] = ()
-    aggregates: tuple[Projection, ...] = ()
+    columns: tuple[Projection, ...]
+
+    @property
+    def grouping(self) -> tuple[Projection, ...]:
+        return tuple(column for column in self.columns
+                     if not isinstance(column.expression, AggregateCall))
+
+    @property
+    def aggregates(self) -> tuple[Projection, ...]:
+        return tuple(column for column in self.columns
+                     if isinstance(column.expression, AggregateCall))

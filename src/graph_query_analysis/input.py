@@ -12,7 +12,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from graph_query_analysis.model import AnalysisRequest, AstNode, GraphSchema, RelationshipSignature
+from graph_query_analysis.model import AnalysisRequest, GraphSchema, RelationshipSignature
 
 
 class InputValidationError(ValueError):
@@ -29,17 +29,6 @@ def _text(value: Any, path: str) -> str:
     if not isinstance(value, str) or not value:
         raise InputValidationError(f"{path} must be a nonempty string")
     return value
-
-
-def _ast_node(value: Any, path: str, *, expected: str | None = None) -> AstNode:
-    """Validate a node's wrapper without decoding or rebuilding its children."""
-    node = _object(value, path)
-    kind = _text(node.get("type"), f"{path}.type")
-    _object(node.get("args"), f"{path}.args")
-    if expected is not None and kind != expected:
-        raise InputValidationError(f"{path}.type must be {expected!r}, got {kind!r}")
-    return node
-
 
 
 
@@ -110,6 +99,7 @@ def _read_request(raw: Any, index: int) -> AnalysisRequest:
         raise InputValidationError(f"Unsupported dialect {dialect!r}; expected 'neo4j25'")
     query_text = _text(data.get("query_text"), "query_text")
     query_ast = tuple(data.get("query_ast"))
+
     parameters = data.get("parameters", {})
     if parameters is None:
         parameters = {}

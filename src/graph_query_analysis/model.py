@@ -133,7 +133,7 @@ class SymbolicState:
 
     MATCH will introduce symbolic graph witnesses; WHERE will add conditions;
     WITH, DISTINCT and RETURN will transform symbolic bag expressions.
-    None of those operations is implemented in this foundational module.
+    Compiler initializes the graph; transformations replace immutable states.
     """
 
     schema: GraphSchema

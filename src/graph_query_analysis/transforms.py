@@ -31,6 +31,7 @@ from graph_query_analysis.expressions import (
     Arithmetic,
     Comparison,
     DistinctBag,
+    ExtendBag,
     FilterBag,
     FunctionCall,
     IsNull,
@@ -46,7 +47,7 @@ from graph_query_analysis.expressions import (
     ValueExpression,
     ValueLiteral,
 )
-from graph_query_analysis.graph import GraphSnapshot, NodeRequirement, RelationshipRequirement
+from graph_query_analysis.graph import NodeRequirement, RelationshipRequirement
 from graph_query_analysis.model import (
     Binding,
     NodeSymbol,
@@ -62,6 +63,10 @@ class TransformError(ValueError):
 
 class UnsupportedCypherError(NotImplementedError):
     """Valid-looking syntax outside the currently implemented semantics."""
+
+
+class VariableScopeError(TransformError):
+    """A Cypher variable is unavailable at this point in the query."""
 
 
 _AGGREGATES = frozenset(("count", "sum", "avg", "min", "max", "collect"))
@@ -115,12 +120,9 @@ def _scope(state: SymbolicState) -> dict[str, Binding]:
 def _resolve(state: SymbolicState, name: str):
     binding = _scope(state).get(name)
     if binding is None:
-        raise TransformError(f"Variable {name!r} is not in scope")
+        raise VariableScopeError(f"Variable {name!r} is not in scope")
     return binding.symbol
 
-
-def _available_graph(state: SymbolicState) -> GraphSnapshot:
-    return state.graph if state.graph is not None else GraphSnapshot.empty()
 
 
 def _fresh_symbol(state: SymbolicState, name: str | None, *, relationship: bool,
@@ -132,7 +134,7 @@ def _fresh_symbol(state: SymbolicState, name: str | None, *, relationship: bool,
     its earlier binding. Generated names contain NUL, which cannot appear in a
     Cypher identifier. ``reserved`` also covers allocations in this clause.
     """
-    graph = _available_graph(state).graph
+    graph = state.graph.graph
     used = set(reserved)
     if relationship:
         used.update(data["symbol"].name for _, _, data in graph.edges(data=True))
@@ -150,14 +152,18 @@ def _fresh_symbol(state: SymbolicState, name: str | None, *, relationship: bool,
     return RelationshipSymbol(candidate) if relationship else NodeSymbol(candidate)
 
 
-def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False) -> ValueExpression:
+def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
+           variables: Mapping[str, ValueExpression] | None = None) -> ValueExpression:
     kind, args = _node(ast, "value")
     if kind == "Identifier":
-        return SymbolReference(_resolve(state, _identifier(ast, "variable reference")))
+        name = _identifier(ast, "variable reference")
+        if variables is not None and name in variables:
+            return variables[name]
+        return SymbolReference(_resolve(state, name))
     if kind == "Property":
         prop = args.get("name")
         _require(isinstance(prop, str) and bool(prop), "Property.name must be a string")
-        return PropertyAccess(_value(args.get("this"), state), prop)
+        return PropertyAccess(_value(args.get("this"), state, variables=variables), prop)
     if kind in ("String", "StringLiteral"):
         literal = args.get("this")
         _require(isinstance(literal, str), "String literal must contain a string")
@@ -194,8 +200,9 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False) -> ValueE
         _require(isinstance(name, str) and bool(name), "Parameter requires a name")
         return ParameterReference(name)
     if kind in _ARITHMETIC:
-        return Arithmetic(_ARITHMETIC[kind], _value(args.get("this"), state),
-                          _value(args.get("expression"), state))
+        return Arithmetic(_ARITHMETIC[kind],
+                          _value(args.get("this"), state, variables=variables),
+                          _value(args.get("expression"), state, variables=variables))
     if kind == "FunctionCall":
         name = args.get("name")
         _require(isinstance(name, str) and bool(name), "FunctionCall requires a name")
@@ -211,7 +218,7 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False) -> ValueE
                 _require(name_lower == "count", "Only count(*) accepts a star")
                 arg = None
             elif len(raw_arguments) == 1:
-                arg = _value(raw_arguments[0], state)
+                arg = _value(raw_arguments[0], state, variables=variables)
             else:
                 raise UnsupportedCypherError(f"Unsupported {name} argument list")
             if name_lower != "count" and arg is None:
@@ -222,27 +229,29 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False) -> ValueE
             return AggregateCall(name_lower, arg, distinct=bool(distinct))
         if args.get("distinct") not in (None, False):
             _unsupported("DISTINCT on scalar function", name)
-        return FunctionCall(name, tuple(_value(a, state) for a in raw_arguments))
+        return FunctionCall(name, tuple(_value(a, state, variables=variables) for a in raw_arguments))
     _unsupported("Value AST type", kind)
 
 
-def _predicate(ast: Any, state: SymbolicState) -> Predicate:
+def _predicate(ast: Any, state: SymbolicState, *,
+               variables: Mapping[str, ValueExpression] | None = None) -> Predicate:
     kind, args = _node(ast, "predicate")
     if kind == "Where":
-        return _predicate(args["this"], state)
+        return _predicate(args["this"], state, variables=variables)
     if kind in _COMPARISONS:
-        return Comparison(_COMPARISONS[kind], _value(args.get("this"), state),
-                          _value(args.get("expression"), state))
+        return Comparison(_COMPARISONS[kind],
+                          _value(args.get("this"), state, variables=variables),
+                          _value(args.get("expression"), state, variables=variables))
     if kind in ("And", "Or"):
-        left = _predicate(args.get("this"), state)
-        right = _predicate(args.get("expression"), state)
+        left = _predicate(args.get("this"), state, variables=variables)
+        right = _predicate(args.get("expression"), state, variables=variables)
         return AllOf((left, right)) if kind == "And" else AnyOf((left, right))
     if kind == "Not":
-        return Negation(_predicate(args.get("this"), state))
+        return Negation(_predicate(args.get("this"), state, variables=variables))
     if kind in ("IsNull", "IsNotNull"):
-        return IsNull(_value(args.get("this"), state), negated=kind == "IsNotNull")
+        return IsNull(_value(args.get("this"), state, variables=variables), negated=kind == "IsNotNull")
     if kind == "Boolean":
-        literal = _value(ast, state)
+        literal = _value(ast, state, variables=variables)
         return TruthLiteral(literal.value)
     if kind == "Null":
         return TruthLiteral(None)
@@ -394,22 +403,20 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
     condition = _all(predicates)
     if condition is not None:
         bag = FilterBag(bag, condition)
-    return replace(scoped, bag=bag, graph=_available_graph(state).advance(
+    return replace(scoped, bag=bag, graph=state.graph.advance(
         nodes=nodes, relationships=relationships,
     ))
 
 
-def _default_alias(ast: Any, index: int, *, with_clause: bool) -> str:
-    kind, args = _node(ast, "projection")
-    if kind == "Identifier":
-        return _identifier(ast, "projection")
-    if kind == "Property" and not with_clause:
-        owner_kind, owner_args = _node(args.get("this"), "projection owner")
-        if owner_kind == "Identifier" and isinstance(args.get("name"), str):
-            return f"{owner_args['this']}.{args['name']}"
-    if with_clause:
-        raise TransformError("WITH expressions other than variables require AS alias")
-    return f"expression_{index}"
+def _default_alias(ast: Any) -> str | None:
+    """Only a bare identifier supplies an implicit variable name.
+
+    For other unaliased expressions, retain the expression and output position
+    instead of inventing an incorrect column header.
+    """
+    kind, _ = _node(ast, "projection")
+    return _identifier(ast, "projection") if kind == "Identifier" else None
+
 
 
 def _bag_depth(bag) -> int:
@@ -420,7 +427,7 @@ def _bag_depth(bag) -> int:
     return depth
 
 
-def _projection_items(state: SymbolicState, items: Any, *, with_clause: bool):
+def _projection_items(state: SymbolicState, items: Any):
     _require(isinstance(items, list) and bool(items), "Projection requires a nonempty expressions list")
     projections: list[Projection] = []
     bindings: list[Binding] = []
@@ -432,26 +439,31 @@ def _projection_items(state: SymbolicState, items: Any, *, with_clause: bool):
             alias = _identifier(args.get("alias"), "projection alias")
             value_ast = args.get("this")
         else:
-            alias = _default_alias(item, index, with_clause=with_clause)
+            alias = _default_alias(item)
             value_ast = item
-        if any(binding.variable == alias for binding in bindings):
+        if alias is not None and any(binding.variable == alias for binding in bindings):
             raise TransformError(f"Duplicate projection alias {alias!r}")
         expr = _value(value_ast, state, aggregate=True)
-        projection = Projection(alias, expr)
-        projections.append(projection)
-        if isinstance(expr, AggregateCall):
-            aggregations.append(projection)
-        else:
-            groupings.append(projection)
-        # Direct node/relationship references retain their identity under AS.
-        # Computed values get fresh internal identities to avoid capture when
-        # a name is shadowed by a later WITH.
+
         if isinstance(expr, SymbolReference):
             out_symbol = expr.symbol
         else:
             out_symbol = ScalarSymbol(f"\x00computed:{_bag_depth(state.bag)}:{index}")
+        projections.append(Projection(alias, expr, out_symbol))
+        if alias is not None:
         bindings.append(Binding(alias, out_symbol))
-    return tuple(projections), tuple(bindings), tuple(groupings), tuple(aggregations)
+    return tuple(projections), tuple(bindings)
+
+
+def _names_referenced(ast: Any) -> set[str]:
+    """Read identifiers in an already-parsed WHERE expression; no Cypher parsing."""
+    if isinstance(ast, list):
+        return set().union(*(_names_referenced(x) for x in ast)) if ast else set()
+    if isinstance(ast, dict):
+        if ast.get("type") == "Identifier":
+            return {ast["args"]["this"]}
+        return set().union(*(_names_referenced(x) for x in ast.values()))
+    return set()
 
 
 def _project_clause(state: SymbolicState, clause: dict[str, Any], *, with_clause: bool) -> SymbolicState:
@@ -465,21 +477,45 @@ def _project_clause(state: SymbolicState, clause: dict[str, Any], *, with_clause
             _unsupported(f"{expected}.{modifier}", args[modifier])
     distinct = args.get("distinct")
     _require(distinct is None or isinstance(distinct, bool), "DISTINCT must be boolean or null")
-    columns, bindings, grouping, aggregates = _projection_items(
-        state, args.get("expressions"), with_clause=with_clause)
-    if aggregates:
-        bag = AggregateBag(state.bag, grouping=grouping, aggregates=aggregates)
+    if not with_clause and args.get("where") is not None:
+        _unsupported("RETURN WHERE", args["where"])
+
+    columns, bindings = _projection_items(state, args.get("expressions"))
+    has_aggregates = any(isinstance(c.expression, AggregateCall) for c in columns)
+    where = args.get("where") if with_clause else None
+    exported_names = {b.variable for b in bindings}
+    uses_hidden_input = where is not None and bool(_names_referenced(where) - exported_names)
+
+    if has_aggregates:
+        # Aggregation doesn't retain arbitrary source rows; a grouped WHERE
+        # cannot refer to their non-projected bindings without added semantics.
+        if uses_hidden_input:
+            raise UnsupportedCypherError(
+                "WITH WHERE refers to non-projected input after aggregation"
+            )
+        bag = AggregateBag(state.bag, columns)
+    elif uses_hidden_input:
+        # Compute aliases ONCE, keeping input symbols until the WHERE is applied.
+        extended = ExtendBag(state.bag, columns)
+        combined = {b.variable: b for b in state.scope}
+        combined.update({b.variable: b for b in bindings})  # New aliases shadow old names.
+        extended_state = replace(state, scope=tuple(combined.values()))
+        predicate = _predicate(where, extended_state)
+        # Project from the materialized results, not from original expressions:
+        # this avoids duplicating nondeterministic function calls such as rand().
+        exposed = tuple(Projection(c.alias, SymbolReference(c.symbol), c.symbol) for c in columns)
+        bag = ProjectBag(FilterBag(extended, predicate), exposed)
     else:
         bag = ProjectBag(state.bag, columns)
+
     if distinct:
         bag = DistinctBag(bag)
-    result = replace(state, bag=bag, scope=bindings, graph=_available_graph(state).advance())
-    if with_clause and args.get("where") is not None:
-        bag = FilterBag(bag, _predicate(args["where"], result))
-        result = replace(result, bag=bag)
-    elif not with_clause and args.get("where") is not None:
-        _unsupported("RETURN WHERE", args["where"])
+
+    result = replace(state, bag=bag, scope=bindings, graph=state.graph.advance())
+    if where is not None and (has_aggregates or not uses_hidden_input):
+        result = replace(result, bag=FilterBag(result.bag, _predicate(where, result)))
     return result
+
 
 
 def transform_with(state: SymbolicState, clause: dict[str, Any]) -> SymbolicState:
