@@ -12,7 +12,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from .model import AnalysisRequest, AstNode, GraphSchema, RelationshipSignature
+from graph_query_analysis.model import AnalysisRequest, AstNode, GraphSchema, RelationshipSignature
 
 
 class InputValidationError(ValueError):
@@ -41,26 +41,6 @@ def _ast_node(value: Any, path: str, *, expected: str | None = None) -> AstNode:
     return node
 
 
-def _validate_query_ast(raw_ast: Any) -> tuple[AstNode, ...]:
-    """Require the source envelope: one Cypher -> Query -> clause list.
-
-    Nested expressions/patterns are parsed by the existing CypherAST stage;
-    the future symbolic compiler will validate constructs it understands.
-    """
-    if not isinstance(raw_ast, list) or len(raw_ast) != 1:
-        raise InputValidationError("query_ast must be a list with exactly one Cypher root")
-
-    root = _ast_node(raw_ast[0], "query_ast[0]", expected="Cypher")
-    query = _ast_node(root["args"].get("this"), "query_ast[0].args.this", expected="Query")
-    clauses = query["args"].get("clauses")
-    if not isinstance(clauses, list) or not clauses:
-        raise InputValidationError("query_ast[0].args.this.args.clauses must be a nonempty list")
-    for i, clause in enumerate(clauses):
-        _ast_node(clause, f"query_ast[0].args.this.args.clauses[{i}]")
-
-    # Make a defensive copy only: lists remain lists and dictionaries remain
-    # dictionaries, including the nested `Map.entries` pair lists.
-    return tuple(deepcopy(raw_ast))
 
 
 def _read_properties(section: Any, path: str) -> Mapping[str, Mapping[str, str]]:
@@ -129,7 +109,7 @@ def _read_request(raw: Any, index: int) -> AnalysisRequest:
     if dialect != "neo4j25":
         raise InputValidationError(f"Unsupported dialect {dialect!r}; expected 'neo4j25'")
     query_text = _text(data.get("query_text"), "query_text")
-    query_ast = _validate_query_ast(data.get("query_ast"))
+    query_ast = tuple(data.get("query_ast"))
     parameters = data.get("parameters", {})
     if parameters is None:
         parameters = {}

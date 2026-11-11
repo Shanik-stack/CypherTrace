@@ -25,8 +25,8 @@ creating expression objects alone does not establish any query findings.
 from dataclasses import dataclass
 from typing import Literal
 
-from .graph import NodeRequirement, RelationshipRequirement
-from .model import (
+from graph_query_analysis.graph import NodeRequirement, RelationshipRequirement
+from graph_query_analysis.model import (
     BagExpression,
     NodeSymbol,
     RelationshipSymbol,

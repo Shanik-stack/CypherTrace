@@ -8,10 +8,8 @@ SymbolicState is the starting point for later symbolic clause transformations.
 """
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Mapping
+from typing import  Any, Literal, Mapping
 
-if TYPE_CHECKING:
-    from .graph import GraphSnapshot
 
 
 # Compatibility with code importing `AstNode` from this package. This is only
@@ -141,10 +139,5 @@ class SymbolicState:
     schema: GraphSchema
     scope: tuple[Binding, ...]
     bag: BagExpression
-    graph: GraphSnapshot | None = None  # NetworkX symbolic-pattern snapshot.
+    graph: "GraphSnapshot | None" = None  # NetworkX symbolic-pattern snapshot.
 
-    @classmethod
-    def initial(cls, schema: GraphSchema) -> SymbolicState:
-        from .graph import GraphSnapshot
-
-        return cls(schema=schema, scope=(), bag=UnitBag(), graph=GraphSnapshot.empty())

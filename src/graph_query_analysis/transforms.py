@@ -1,21 +1,17 @@
 """Implementing the clause transformatoins 
 like MATCH WHERE WITH RETURN etc"""
-
-
 """Clause-by-clause, graph-independent interpretation of serialized CypherAST.
 
-This module consumes the dictionaries already produced by ``build_xxx_request``.
-A successful transformation builds a *description* of what
+This module consumes the dictionaries already produced by ``build_lean_request``.
+It does not import CypherAST, inspect graph records, evaluate symbolic bags, or
+invoke a solver. A successful transformation builds a *description* of what
 would be matched/projected on any compatible graph.
 
-Implemented fragment (Neo4j Cypher 5):
+Implemented fragment (Neo4j Cypher 25):
   * fixed-length node/relationship patterns in mandatory MATCH, including
     direction, simple conjunctions of labels, and property maps;
-    
   * MATCH/inline WHERE for the predicate forms recognized below;
-  
   * WITH / RETURN projection, DISTINCT, and direct aggregate calls;
-  
   * WITH ... WHERE evaluated against the projected scope.
 
 Unknown syntax is rejected explicitly. OPTIONAL MATCH, variable-length paths,
@@ -27,7 +23,7 @@ from dataclasses import replace
 from itertools import combinations
 from typing import Any, Mapping
 
-from .expressions import (
+from graph_query_analysis.expressions import (
     AggregateBag,
     AggregateCall,
     AllOf,
@@ -50,8 +46,8 @@ from .expressions import (
     ValueExpression,
     ValueLiteral,
 )
-from .graph import GraphSnapshot, NodeRequirement, RelationshipRequirement
-from .model import (
+from graph_query_analysis.graph import GraphSnapshot, NodeRequirement, RelationshipRequirement
+from graph_query_analysis.model import (
     Binding,
     NodeSymbol,
     RelationshipSymbol,
@@ -232,6 +228,8 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False) -> ValueE
 
 def _predicate(ast: Any, state: SymbolicState) -> Predicate:
     kind, args = _node(ast, "predicate")
+    if kind == "Where":
+        return _predicate(args["this"], state)
     if kind in _COMPARISONS:
         return Comparison(_COMPARISONS[kind], _value(args.get("this"), state),
                           _value(args.get("expression"), state))
@@ -383,11 +381,11 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
             bind_relationship(elements[i], left, right)
             left = right
 
-    # Neo4j 5 default relationship isomorphism applies WITHIN ONE MATCH, not
-    # across different MATCH clauses. Same named witness in two occurrences
-    # produces an explicit contradiction instead of silently merging them.
+    # Default relationship uniqueness applies across all patterns in this MATCH.
     for a, b in combinations(relationships, 2):
-        predicates.append(Comparison("<>", SymbolReference(a.symbol), SymbolReference(b.symbol)))
+        predicates.append(Comparison(
+            "<>", SymbolReference(a.symbol), SymbolReference(b.symbol)
+        ))
 
     scoped = replace(state, scope=tuple(bindings.values()))
     if args.get("where") is not None:
@@ -397,7 +395,8 @@ def transform_match(state: SymbolicState, clause: dict[str, Any]) -> SymbolicSta
     if condition is not None:
         bag = FilterBag(bag, condition)
     return replace(scoped, bag=bag, graph=_available_graph(state).advance(
-        nodes=nodes, relationships=relationships))
+        nodes=nodes, relationships=relationships,
+    ))
 
 
 def _default_alias(ast: Any, index: int, *, with_clause: bool) -> str:

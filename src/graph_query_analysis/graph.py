@@ -16,7 +16,7 @@ from typing import Any, Iterable, Literal
 
 import networkx as nx
 
-from .model import GraphSchema, NodeSymbol, RelationshipSymbol
+from graph_query_analysis.model import GraphSchema, NodeSymbol, RelationshipSymbol
 
 
 Direction = Literal["OUTGOING", "INCOMING", "BOTH"]
