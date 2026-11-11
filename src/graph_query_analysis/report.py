@@ -408,9 +408,15 @@ def generate_report(request: AnalysisRequest,
     """
     if states is None:
         try:
-            states, failed_states = compile_request(request)
+            states = compile_request(request)
         except (TransformError, UnsupportedCypherError) as exc:
-            message = str(exc)
+            from graph_query_analysis.diagnostics import diagnose_request
+            diagnostics = diagnose_request(request, compilation_error=exc)
+            message = "\n".join(
+                f"Clause {item['clause_index'] or '?'} "
+                f"({item['clause_type'] or 'query'}), {item['code']}: {item['error']}"
+                for item in diagnostics
+            )
             finding = _finding(
                 "COMPILATION-FAILED", None, "Query was not compiled",
                 "The current compiler rejected the query. This may be a scope/type "

@@ -138,6 +138,18 @@ class Comparison(Predicate):
 
 
 @dataclass(frozen=True)
+class StringPredicate(Predicate):
+    """Case-sensitive Cypher string predicate with three-valued NULL behavior.
+
+    Non-STRING or NULL operands yield NULL, which WHERE does not retain.
+    """
+
+    operator: Literal["STARTS WITH", "ENDS WITH", "CONTAINS"]
+    left: ValueExpression
+    right: ValueExpression
+
+
+@dataclass(frozen=True)
 class AllOf(Predicate):
     """Cypher AND: NULL is not the same as FALSE."""
 

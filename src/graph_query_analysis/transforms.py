@@ -47,6 +47,7 @@ from graph_query_analysis.expressions import (
     SliceBag,
     PropertyAccess,
     SymbolReference,
+    StringPredicate,
     TruthLiteral,
     ValueExpression,
     ValueLiteral,
@@ -84,6 +85,9 @@ _COMPARISONS = {
     "LTE": "<=", "Lte": "<=", "LessThanOrEqual": "<=",
 }
 _ARITHMETIC = {"Add": "+", "Sub": "-", "Mul": "*", "Div": "/", "Mod": "%"}
+_STRING_PREDICATES = {
+    "StartsWith": "STARTS WITH", "EndsWith": "ENDS WITH", "Contains": "CONTAINS",
+}
 
 
 def _node(value: Any, context: str) -> tuple[str, Mapping[str, Any]]:
@@ -257,6 +261,25 @@ def _predicate(ast: Any, state: SymbolicState, *,
         return Comparison(_COMPARISONS[kind],
                           _value(args.get("this"), state, variables=variables),
                           _value(args.get("expression"), state, variables=variables))
+    if kind in _STRING_PREDICATES:
+        return StringPredicate(
+            _STRING_PREDICATES[kind],
+            _value(args.get("this"), state, variables=variables),
+            _value(args.get("expression"), state, variables=variables),
+        )
+    if kind == "FunctionCall":
+        # CypherAST parses function-call syntax, but does not establish whether
+        # the referenced function exists in Neo4j. These are operators, not
+        # built-in Cypher functions; silently accepting them would be unsound.
+        name = args.get("name", "")
+        if isinstance(name, str) and name.lower() in ("startswith", "endswith", "contains"):
+            operator = {
+                "startswith": "STARTS WITH", "endswith": "ENDS WITH", "contains": "CONTAINS"
+            }[name.lower()]
+            raise UnsupportedCypherError(
+                f"{name}() is not a built-in Cypher string predicate; "
+                f"write `value {operator} pattern` instead"
+            )
     if kind in ("And", "Or"):
         left = _predicate(args.get("this"), state, variables=variables)
         right = _predicate(args.get("expression"), state, variables=variables)

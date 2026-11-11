@@ -10,7 +10,7 @@ from graph_query_analysis.expressions import (AggregateBag, AggregateCall, AllOf
     Arithmetic, DistinctBag, ExtendBag, FilterBag, FunctionCall, HasLabel, IsNull,
     MatchBag, Negation, NodeInGraph, ParameterReference, Predicate, ProjectBag,
     Projection, PropertyAccess, RelationshipHolds, SameValue, SliceBag, SortBag,
-    SymbolReference, TruthLiteral, ValueExpression, ValueLiteral)
+    SymbolReference, StringPredicate, TruthLiteral, ValueExpression, ValueLiteral)
 from graph_query_analysis.model import (AnalysisRequest, BagExpression, NodeSymbol,
                      RelationshipSymbol, Symbol, SymbolicState, ValueSymbol) 
 from graph_query_analysis.algebraic_translation import format_predicate, format_value
@@ -279,7 +279,7 @@ class AnalysisContext:
         return self.expression(expr)
 
     def predicate(self, pred: Predicate, at_clause: int | None = None) -> str:
-        if isinstance(pred, Comparison):
+        if isinstance(pred, (Comparison, StringPredicate)):
             return (f'{self.expression(pred.left, at_clause)} {pred.operator} '
                     f'{self.expression(pred.right, at_clause)}')
         if isinstance(pred, SameValue):

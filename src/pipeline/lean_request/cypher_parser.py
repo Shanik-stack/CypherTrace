@@ -29,9 +29,14 @@ class cypherast_parser():
     
     #parse Cypher to AST using Cypherast
     def parse_to_ast(self, queries: list[str]) -> tuple[list[AstNode], list]:
+        
         parser_results = []
         parsing_errors = []
         for i, query in enumerate(queries):
+            query = query.strip()
+
+            if query.endswith(";"):
+                query = query[:-1].rstrip()
             try:
                 tree = _neo4j25Parser(query, dialect="neo4j25").parse()
             except ParseError as e:
@@ -84,7 +89,7 @@ class cypherast_parser():
         ast_objects, errors = self.parse_to_ast(queries)
         ast_dicts = self.ast_to_dict(ast_objects, write_file = False)
         lean_requests = []
-        error_dict = {"no_errors": len(errors), "errors": errors}
+        error_dict = {"no_errors": len(queries) - len(errors), "errors": errors}
         
         for i, (query, ast, schema) in enumerate(zip(queries, ast_dicts, schemas)):
             if ast is None:

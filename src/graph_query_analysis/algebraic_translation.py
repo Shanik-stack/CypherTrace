@@ -12,7 +12,7 @@ from graph_query_analysis.expressions import (
     HasLabel, Indicator, IsNull, MatchBag, MultiplicityConstant,
     MultiplicityExpression, Multiply, Negation, NodeInGraph, Predicate,
     ProjectBag, PropertyAccess, RelationshipHolds, SameValue, SliceBag,
-    SortBag, SumOver, Support, SymbolReference, TruthLiteral, ValueExpression,
+    SortBag, SumOver, Support, SymbolReference, StringPredicate, TruthLiteral, ValueExpression,
     ValueLiteral,
 )
 from graph_query_analysis.model import BagExpression, Symbol, SymbolicState, UnitBag
@@ -356,6 +356,8 @@ def format_predicate(predicate: Predicate) -> str:
     if isinstance(predicate, RelationshipHolds):
         return f"edge({_name(predicate.relationship)}, {_name(predicate.left)}, {_name(predicate.right)}, {predicate.types}, {predicate.direction})"
     if isinstance(predicate, Comparison):
+        return f"{format_value(predicate.left)} {predicate.operator} {format_value(predicate.right)}"
+    if isinstance(predicate, StringPredicate):
         return f"{format_value(predicate.left)} {predicate.operator} {format_value(predicate.right)}"
     if isinstance(predicate, IsNull):
         return f"{format_value(predicate.expression)} IS {'NOT ' if predicate.negated else ''}NULL"

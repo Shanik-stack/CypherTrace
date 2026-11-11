@@ -1,22 +1,31 @@
-"""Composing the transforms in AST clause order"""
+"""Compile a single Cypher query into a complete sequence of symbolic states.
 
-
-"""Compose Cypher clause transformations into successive symbolic states.
-
-Each state describes the query after one more clause. Nothing is executed
-against a database, and no correctness claims are proved here.
+Compilation is sequential and fail-fast: downstream transformations must never
+be applied to a stale state. Use diagnostics.diagnose_request for independent,
+non-sequential checks across all clauses; compile_requests handles batches.
 """
 
-from graph_query_analysis.model import AnalysisRequest, SymbolicState, UnitBag
-from graph_query_analysis.transforms import TransformError, UnsupportedCypherError, transform_clause
+from pathlib import Path
+from typing import Sequence
+
 from graph_query_analysis.graph import GraphSnapshot
+from graph_query_analysis.model import AnalysisRequest, SymbolicState, UnitBag
+from graph_query_analysis.transforms import (
+    TransformError, UnsupportedCypherError, transform_clause,
+)
 
 
-def compile_request(
-    request: AnalysisRequest,
-) -> tuple[tuple[SymbolicState, ...] | None, tuple[dict, ...]] |None:
+def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
+    """Return the initial state followed by one state per successfully compiled clause.
 
+    Raise an informative error on the first semantic transformation failure.
+    Nothing after a failed clause is compiled because its input state is invalid.
+    """
     clauses = request.clauses
+    if not clauses:
+        raise TransformError("Query contains no clauses")
+    if clauses[-1]["type"] != "Return":
+        raise UnsupportedCypherError("Only queries ending in RETURN are supported")
 
     state = SymbolicState(
         schema=request.schema,
@@ -24,103 +33,59 @@ def compile_request(
         bag=UnitBag(),
         graph=GraphSnapshot.empty(),
     )
-
-    success_states = [state]
-    failed_states = []
-    index = None
-    kind = None
-
-    try:
-        if not clauses:
-            raise TransformError("Query contains no clauses")
-
-        if clauses[-1]["type"] != "Return":
-            raise UnsupportedCypherError(
-                "Only queries ending in RETURN are supported"
-            )
-
-        for index, clause in enumerate(clauses, start=1):
-            kind = clause["type"]
-
+    states = [state]
+    for index, clause in enumerate(clauses, start=1):
+        kind = clause["type"]
+        try:
             if kind == "Return" and index != len(clauses):
-                raise UnsupportedCypherError(
-                    "RETURN must be the final clause"
-                )
-
+                raise UnsupportedCypherError("RETURN must be the final clause")
             state = transform_clause(state, clause)
-            success_states.append(state)
+        except (TransformError, UnsupportedCypherError) as exc:
+                raise type(exc)(f"Clause {index} ({kind}): {exc}") from exc
+        states.append(state)
+    return tuple(states)
 
-    except (TransformError, UnsupportedCypherError) as exc:
-        failed_states.append({
-            "request_id": request.request_id,
-            "query": request.query_text,
-            "clause_index": index,
-            "clause_type": kind,
-            "error_type": type(exc).__name__,
-            "error": str(exc),
-        })
-        return None
 
-    return tuple(success_states), tuple(failed_states)
-
-def compile_requests(requests: list[AnalysisRequest] | tuple[AnalysisRequest]):
-    all_states, all_failed = [], []
-    for query_idx in range(len(requests)):
-            analysis_request = analysis_requests[query_idx]
-            states, failed_states = compile_request(analysis_request)
-            all_states.append(states)
-            all_failed.append(all_failed)
-    return all_states, all_failed
+def compile_requests(
+    requests: Sequence[AnalysisRequest],
+) -> tuple[
+    tuple[tuple[SymbolicState, ...] | None, ...],
+    tuple[tuple[dict, ...], ...],
+]:
+    """Compile each query independently, preserving input order.
             
+    The second result contains *all independently detectable AST issues* for
+    each failed query plus the first sequential compiler error. Errors cannot
+    be exhaustively inferred when they depend on unavailable previous states.
+    """
+    from graph_query_analysis.diagnostics import diagnose_request
 
+    states_by_request = []
+    errors_by_request = []
+    for request in requests:
+        try:
+            states = compile_request(request)
+        except (TransformError, UnsupportedCypherError) as exc:
+            states_by_request.append(None)
+            errors_by_request.append(diagnose_request(request, compilation_error=exc))
+        else:
+            states_by_request.append(states)
+            errors_by_request.append(())
+    return tuple(states_by_request), tuple(errors_by_request)
+
+
+def compile_file(requests_path: str | Path):
+    """Function-based batch entrypoint (no command-line arguments needed)."""
+    from graph_query_analysis.input import load_requests
+    return compile_requests(load_requests(requests_path))
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    import json
-    path = Path(r"graph_analysis_requests\cypherast_lean_request.json")
-    with open(path, 'r') as f:
-        json_request = json.load(f)
-    json_request_0 = json_request[0]
-    
-    from graph_query_analysis.input import load_requests
-    analysis_requests = load_requests(path)
-    for query_idx in range(len(analysis_requests)):
-        print(f"\n\n ---------------- QUERY: {query_idx}------------\n\n")
-        analysis_request = analysis_requests[query_idx]
-        print(analysis_request.query_text)
-        print("\n\n ---------------- STATES ------------\n\n")
-        states, failed_states = compile_request(analysis_request)
-        print("\n\n ------ 10 FAILED STATES ----\n\n")
-        print(failed_states[:10])
-        print("------------------\n\n")
-        print(analysis_request)
-
-        def bag_chain(bag):
-            names = []
-
-            while True:
-                names.append(type(bag).__name__)
-                if not hasattr(bag, "source"):
-                    break
-                bag = bag.source
-
-            return " → ".join(reversed(names))
-
-
-        for i, state in enumerate(states):
-            clause = "INITIAL" if i == 0 else analysis_request.clauses[i - 1]["type"]
-
-            print(f"\nState {i} ({clause})")
-            print("Scope:", [b.variable for b in state.scope])
-            print("Bag:", bag_chain(state.bag))
-
-            graph = state.graph.graph
-
-            print("Nodes:")
-            for symbol, data in graph.nodes(data=True):
-                print(" ", symbol.name, data.get("labels"))
-
-            print("Relationships:")
-            for left, right, key, data in graph.edges(keys=True, data=True):
-                print(" ", left.name, "->", right.name, data.get("types"))
+    requests_path = Path("lean_requests_json/cypherast_lean_request.json")
+    compiled, diagnostics = compile_file(requests_path)
+    print(f"Total requests: {len(compiled)}")
+    print(f"Compiled successfully: {sum(s is not None for s in compiled)}")
+    print(f"Failed compilation: {sum(s is None for s in compiled)}")
+    for result in diagnostics:
+        for issue in result:
+            print(f"{issue['request_id']} | {issue['code']}: {issue['error']}")

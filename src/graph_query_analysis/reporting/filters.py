@@ -1,11 +1,11 @@
 """Predicate dependency, row elimination, and NULL interpretation."""
 from graph_query_analysis.reporting.core import AnalysisContext, Insight, Section, property_accesses
 from graph_query_analysis.expressions import (AllOf, AnyOf, Comparison, FilterBag, IsNull,
-                            MatchBag, Negation, ParameterReference, TruthLiteral)
+                            MatchBag, Negation, ParameterReference, StringPredicate, TruthLiteral)
 
 
 def _mentions_nullable_comparison(pred) -> bool:
-    if isinstance(pred, Comparison):
+    if isinstance(pred, (Comparison, StringPredicate)):
         return True
     if isinstance(pred, (AllOf, AnyOf)):
         return any(_mentions_nullable_comparison(x) for x in pred.conditions)

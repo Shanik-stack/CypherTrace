@@ -99,7 +99,24 @@ def _read_request(raw: Any, index: int) -> AnalysisRequest:
     if dialect != "neo4j25":
         raise InputValidationError(f"Unsupported dialect {dialect!r}; expected 'neo4j25'")
     query_text = _text(data.get("query_text"), "query_text")
-    query_ast = tuple(data.get("query_ast"))
+    raw_ast = data.get("query_ast")
+    if not isinstance(raw_ast, list) or len(raw_ast) != 1:
+        raise InputValidationError(f"requests[{index}].query_ast must contain exactly one Cypher root")
+    root = _object(raw_ast[0], f"requests[{index}].query_ast[0]")
+    if root.get("type") != "Cypher":
+        raise InputValidationError(f"requests[{index}].query_ast[0].type must be 'Cypher'")
+    root_args = _object(root.get("args"), f"requests[{index}].query_ast[0].args")
+    query = _object(root_args.get("this"), f"requests[{index}].query_ast[0].args.this")
+    if query.get("type") != "Query":
+        raise InputValidationError(f"requests[{index}].query_ast must contain a Query node")
+    query_args = _object(query.get("args"), f"requests[{index}].query_ast.Query.args")
+    clauses = query_args.get("clauses")
+    if not isinstance(clauses, list) or not all(
+        isinstance(c, dict) and isinstance(c.get("type"), str) and isinstance(c.get("args"), dict)
+        for c in clauses
+    ):
+        raise InputValidationError(f"requests[{index}].query_ast.Query.clauses must be AST nodes")
+    query_ast = tuple(raw_ast)
 
     parameters = data.get("parameters", {})
     if parameters is None:
