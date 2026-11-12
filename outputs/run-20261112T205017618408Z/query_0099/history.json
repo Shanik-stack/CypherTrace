@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 99,
+  "source_index": 99,
+  "question": "For each continent, calculate the total number of persons who have visited at least two different types of places and the average visit duration (in seconds) for those persons. Return the continent name, the count of persons, and the average visit duration."
+}

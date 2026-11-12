@@ -1,0 +1,32 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:PERFORMS_VISIT]->(v), (v)-[:LOCATED_AT]->(pl), (pl)-[:PART_OF]->(rg), (rg)-[:PART_OF]->(c); constraints: p:Person AND v:Visit AND pl:Place AND rg:Region AND c:Country. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, v, pl, rg, c, @rel, @rel@1, @rel@2, @rel@3.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Person -> Visit, OUTGOING): listed signature compatible; LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible; PART_OF (Region -> Country, OUTGOING): listed signature compatible
+  Row binding slots: p, v, pl, rg, c, @rel, @rel@1, @rel@2, @rel@3
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if v.starttime < p.confirmedtime is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [v.starttime < p.confirmedtime is TRUE]
+  Schema evidence: v.starttime: listed on Visit (DATE_TIME); p.confirmedtime: listed on Person (DATE_TIME)
+  Row binding slots: p, v, pl, rg, c, @rel, @rel@1, @rel@2, @rel@3
+  Variables visible after clause: p, v, pl, rg, c
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by c.name, p.healthstatus, p; compute COUNT(DISTINCT v); output country_name, health_status, p, pre_confirmation_visits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: v, pl, rg, c, @rel, @rel@1, @rel@2, @rel@3.
+  COUNT(DISTINCT v): deduplicate non-NULL argument values within each group
+  Schema evidence: c.name: listed on Country (STRING); p.healthstatus: listed on Person (STRING)
+  Row binding slots: country_name, health_status, p, pre_confirmation_visits
+  Variables visible after clause: country_name, health_status, p, pre_confirmation_visits
+  Names leaving scope: v, pl, rg, c
+S4 ← S3 | clause 3 | AGGREGATE
+  Form group by $computed:2:0, $computed:2:1; compute AVG($computed:2:3); output country_name, health_status, avg_pre_confirmation_visits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: p, @computed:2:3.
+  AVG($computed:2:3) = Σ μ_3(x)·$computed:2:3(x) / Σ μ_3(x), over non-NULL $computed:2:3; NULL if denominator is 0
+  Row binding slots: country_name, health_status, avg_pre_confirmation_visits
+S5 ← S4 | clause 3 | ORDER
+  Order by $computed:2:0 ASC, $computed:2:1 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_5 = μ_4 (ordering metadata changes)
+  Row binding slots: @computed:2:0, @computed:2:1, @computed:3:2
+  Variables visible after clause: country_name, health_status, avg_pre_confirmation_visits
+  Names leaving scope: p, pre_confirmation_visits
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

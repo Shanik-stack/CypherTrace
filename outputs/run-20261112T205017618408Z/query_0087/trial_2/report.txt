@@ -1,0 +1,24 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:VISITS]->(pl); constraints: p:Person AND pl:Place. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, pl, v.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: VISITS (Person -> Place, OUTGOING): listed signature compatible
+  Row binding slots: p, pl, v
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if (pl.type = 'Grocery shop' OR pl.type = 'Restaurant') is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [(pl.type = 'Grocery shop' OR pl.type = 'Restaurant') is TRUE]
+  Schema evidence: pl.type: listed on Place (STRING)
+  Row binding slots: p, pl, v
+  Variables visible after clause: p, pl, v
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by p, pl.type; compute COUNT(v); output p, placeType, visitsPerPerson. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: pl, v.
+  COUNT(v) = Σ μ_2(x) × [v is not NULL]
+  Schema evidence: pl.type: listed on Place (STRING)
+  Row binding slots: p, placeType, visitsPerPerson
+  Variables visible after clause: p, placeType, visitsPerPerson
+  Names leaving scope: pl, v
+Compilation stopped: Clause 3 (With): Value AST type is not supported yet: 'Case'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,26 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (s)<-[:FOR_SHOP]-(l), (l)<-[:WITH_LOGIN]-(p), (p)-[:WITH_CARD]->(bc); constraints: s:Shop AND l:Login AND p:Purchase AND bc:BankCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: s, l, p, bc, @rel, @rel@1, @rel@2.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: FOR_SHOP (Shop -> Login, INCOMING): listed signature compatible; WITH_LOGIN (Login -> Purchase, INCOMING): listed signature compatible; WITH_CARD (Purchase -> BankCard, OUTGOING): listed signature compatible
+  Row binding slots: s, l, p, bc, @rel, @rel@1, @rel@2
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if bc.limit = 5000.0 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [bc.limit = 5000.0 is TRUE]
+  Schema evidence: bc.limit: listed on BankCard (FLOAT)
+  Row binding slots: s, l, p, bc, @rel, @rel@1, @rel@2
+  Variables visible after clause: s, l, p, bc
+S3 ← S2 | clause 2 | PROJECT
+  Output name = s.name. Equal projected rows retain summed multiplicities. Collapsed row slots: s, l, p, bc, @rel, @rel@1, @rel@2.
+  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)
+  Schema evidence: s.name: listed on Shop (STRING)
+  Row binding slots: name
+S4 ← S3 | clause 2 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_4(y) = 1 if μ_3(y) > 0, otherwise 0
+  Row binding slots: @computed:2:0
+  Variables visible after clause: name
+  Names leaving scope: s, l, p, bc
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

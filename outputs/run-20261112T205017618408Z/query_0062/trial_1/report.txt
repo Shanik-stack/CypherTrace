@@ -1,0 +1,28 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:PERFORMS_VISIT]->(v), (v)-[:LOCATED_AT]->(pl), (pl)-[:PART_OF]->(r); constraints: p:Person AND v:Visit AND pl:Place AND r:Region. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, v, pl, r, @rel, @rel@1, @rel@2.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Person -> Visit, OUTGOING): listed signature compatible; LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible
+  Row binding slots: p, v, pl, r, @rel, @rel@1, @rel@2
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if v.starttime < p.confirmedtime is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [v.starttime < p.confirmedtime is TRUE]
+  Schema evidence: v.starttime: listed on Visit (DATE_TIME); p.confirmedtime: listed on Person (DATE_TIME)
+  Row binding slots: p, v, pl, r, @rel, @rel@1, @rel@2
+  Variables visible after clause: p, v, pl, r
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by r, p; compute COUNT(DISTINCT v); output r, p, preConfirmationVisits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: v, pl, @rel, @rel@1, @rel@2.
+  COUNT(DISTINCT v): deduplicate non-NULL argument values within each group
+  Row binding slots: r, p, preConfirmationVisits
+  Variables visible after clause: r, p, preConfirmationVisits
+  Names leaving scope: v, pl
+S4 ← S3 | clause 3 | AGGREGATE
+  Form group by r.name; compute AVG($computed:2:2); output region, avgPreConfirmationVisits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: r, p, @computed:2:2.
+  AVG($computed:2:2) = Σ μ_3(x)·$computed:2:2(x) / Σ μ_3(x), over non-NULL $computed:2:2; NULL if denominator is 0
+  Schema evidence: r.name: listed on Region (STRING)
+  Row binding slots: region, avgPreConfirmationVisits
+  Variables visible after clause: region, avgPreConfirmationVisits
+  Names leaving scope: r, p, preConfirmationVisits
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

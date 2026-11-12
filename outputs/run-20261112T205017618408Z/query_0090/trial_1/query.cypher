@@ -1,0 +1,1 @@
+MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime < datetime('2020-04-15') RETURN c.name AS country, count(v) AS totalVisits, avg(toFloat(v.duration)) AS averageDurationSeconds

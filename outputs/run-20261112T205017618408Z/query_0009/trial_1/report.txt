@@ -1,0 +1,21 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:WITH_LOGIN]->(l), (l)-[:FOR_SHOP]->(s); constraints: p:Purchase AND l:Login AND s:Shop. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, l, s, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: WITH_LOGIN (Purchase -> Login, OUTGOING): listed signature compatible; FOR_SHOP (Login -> Shop, OUTGOING): listed signature compatible
+  Row binding slots: p, l, s, @rel, @rel@1
+  Variables visible after clause: p, l, s
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by s.name; compute AVG(p.amount); output shop, averagePurchaseAmount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: p, l, s, @rel, @rel@1.
+  AVG(p.amount) = Σ μ_1(x)·p.amount(x) / Σ μ_1(x), over non-NULL p.amount; NULL if denominator is 0
+  Schema evidence: s.name: listed on Shop (STRING); p.amount: listed on Purchase (FLOAT)
+  Row binding slots: shop, averagePurchaseAmount
+S3 ← S2 | clause 2 | ORDER
+  Order by $computed:1:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_3 = μ_2 (ordering metadata changes)
+  Row binding slots: @computed:1:0, @computed:1:1
+  Variables visible after clause: shop, averagePurchaseAmount
+  Names leaving scope: p, l, s
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

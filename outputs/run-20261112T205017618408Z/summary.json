@@ -1,0 +1,913 @@
+[
+  {
+    "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nWHERE a.state = 'Montana'\nRETURN avg(p.amount) AS averagePurchaseAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 0,
+    "source_index": 0,
+    "question": "What is the average purchase amount for purchases delivered to addresses in 'Montana'?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN addr.state AS state, avg(c.balance) AS averageBalance\nORDER BY state",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 1,
+    "source_index": 1,
+    "question": "For each state, what is the average balance of credit cards held by account holders who have an address in that state?"
+  },
+  {
+    "final_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'net' RETURN avg(ba.balance) AS averageBalance",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 2,
+    "source_index": 2,
+    "question": "What is the average balance of all BankAccounts that are associated with FinancialInstitutes whose website contains 'net'?"
+  },
+  {
+    "final_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 3,
+    "source_index": 3,
+    "question": "For each provider of PhoneNumber, what is the average amount of MoneyTransfer transactions associated with those phone numbers?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate < '1975'\nRETURN avg(c.balance)",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 4,
+    "source_index": 4,
+    "question": "What is the average balance of CreditCards held by AccountHolders born before 1975, based on their birthDate?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nWHERE c.limit > 5000\nRETURN c.expirationDate AS expirationDate, avg(p.amount) AS averageAmount\nORDER BY expirationDate",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 5,
+    "source_index": 5,
+    "question": "What is the average amount of Purchases made using BankCards with a limit greater than 5000, grouped by the expirationDate of the BankCard?"
+  },
+  {
+    "final_query": "MATCH (accountHolder:AccountHolder)-[:HAS_ADDRESS]->(address:Address)\nMATCH (accountHolder)-[:HAS_BANKACCOUNT]->(bankAccount:BankAccount)\nRETURN address.state AS state, avg(bankAccount.balance) AS averageBalance\nORDER BY state",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 6,
+    "source_index": 6,
+    "question": "For each state, what is the average balance of BankAccounts held by AccountHolders who have an address in that state?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nRETURN a.state AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 7,
+    "source_index": 7,
+    "question": "For each state, what is the average amount of purchases delivered there?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nRETURN c.expirationDate AS expirationDate, sum(p.amount) AS totalPurchaseAmount\nORDER BY expirationDate",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 8,
+    "source_index": 8,
+    "question": "What is the total amount of purchases made with bank cards, grouped by the expiration date of the bank card?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nRETURN s.name AS shop, avg(p.amount) AS averagePurchaseAmount\nORDER BY shop",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 9,
+    "source_index": 9,
+    "question": "For each shop, what is the average purchase amount made by users who logged in to that shop?"
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nRETURN f.name AS financialInstitute, avg(b.balance) AS averageBalance\nORDER BY averageBalance DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 10,
+    "source_index": 10,
+    "question": "What is the average balance of BankAccounts associated with each FinancialInstitute?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 11,
+    "source_index": 11,
+    "question": "For each state, what is the average purchase amount made by purchases originating from IPs located in that state?"
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (ah)-[:HAS_ADDRESS]->(addr:Address)\nRETURN addr.state AS state, avg(cc.balance) AS averageBalance\nORDER BY state",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 12,
+    "source_index": 12,
+    "question": "What is the average balance of CreditCards held by AccountHolders, grouped by the state of the AccountHolder's address?"
+  },
+  {
+    "final_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber) RETURN p.provider AS provider, avg(t.amount) AS averageAmount ORDER BY averageAmount DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 13,
+    "source_index": 13,
+    "question": "Calculate the average amount of MoneyTransfers associated with each PhoneNumber provider."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_ADDRESS]->(ad:Address)\nRETURN ad.city AS city, avg(u.balance) AS averageBalance",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 14,
+    "source_index": 14,
+    "question": "What is the average balance of UnsecuredLoans associated with AccountHolders, grouped by the city of their address?"
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE f.name STARTS WITH 'Muller'\nRETURN avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 15,
+    "source_index": 15,
+    "question": "What is the average balance of BankAccounts associated with FinancialInstitutes that have names starting with 'Muller', and what is the total number of such BankAccounts?"
+  },
+  {
+    "final_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount, count(m) AS moneyTransferCount\nORDER BY provider",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 16,
+    "source_index": 16,
+    "question": "For each provider of PhoneNumbers, what is the average amount of MoneyTransfers associated with those PhoneNumbers, and how many MoneyTransfers are associated with each provider?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder {lastName: 'Breckenridge'})-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN avg(c.balance) AS averageBalance, sum(c.limit) AS totalLimit",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 17,
+    "source_index": 17,
+    "question": "What is the average balance of CreditCards held by AccountHolders with the last name 'Breckenridge', and what is the total limit of those CreditCards?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount, count(p) AS purchaseCount\nORDER BY state",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 18,
+    "source_index": 18,
+    "question": "For each state, calculate the average purchase amount made by purchases originating from IPs located in that state, and also count the number of purchases."
+  },
+  {
+    "final_query": "MATCH (ba:BankAccount)\nWITH avg(ba.balance) AS avgAccountBalance\nOPTIONAL MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan)\nRETURN avgAccountBalance, avg(ul.loanAmount) AS avgUnsecuredLoanAmount",
+    "selected_trial": 1,
+    "status": "compilation_failed",
+    "stop_reason": "revision_failed",
+    "input_index": 19,
+    "source_index": 19,
+    "question": "What is the average balance across all BankAccounts, and what is the average loan amount for all UnsecuredLoans associated with AccountHolders?"
+  },
+  {
+    "final_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE p.provider = 'Interstate Mob'\nRETURN avg(mt.amount) AS averageAmount, count(mt) AS totalTransfers",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 20,
+    "source_index": 20,
+    "question": "What is the average amount of money transfers associated with phone numbers provided by 'Interstate Mob', and what is the total number of such transfers?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nRETURN a.UniqueId AS accountHolderUniqueId, a.fullName AS accountHolderFullName, avg(b.balance) AS averageBankAccountBalance, count(DISTINCT b) AS totalBankAccounts",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 21,
+    "source_index": 21,
+    "question": "For each AccountHolder, what is the average balance of their BankAccounts and the total number of BankAccounts they possess?"
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Ohio' RETURN avg(p.amount) AS averageAmount, max(p.amount) AS maximumAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 22,
+    "source_index": 22,
+    "question": "What is the average and maximum purchase amount made by purchases delivered to addresses in 'Ohio'?"
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nRETURN fi.name AS financialInstitute, avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts\nORDER BY financialInstitute",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 23,
+    "source_index": 23,
+    "question": "For each FinancialInstitute, what is the average balance of the BankAccounts associated with them, and what is the total number of BankAccounts associated with them?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard) WITH DISTINCT c RETURN avg(c.balance) AS averageBalance, count(c) AS totalCreditCards",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 24,
+    "source_index": 24,
+    "question": "What is the average balance of CreditCards held by AccountHolders, and what is the total number of CreditCards linked to these AccountHolders?"
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute) WHERE f.website CONTAINS 'com' RETURN avg(b.balance)",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 25,
+    "source_index": 25,
+    "question": "What is the average balance of BankAccounts that are associated with FinancialInstitutes whose website contains 'com'?"
+  },
+  {
+    "final_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber {provider: 'B Tee'}) RETURN avg(t.amount) AS averageAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 26,
+    "source_index": 26,
+    "question": "What is the average amount of money transferred through MoneyTransfers that used phone numbers from the provider 'B Tee'?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate >= '1976'\nRETURN avg(c.balance) AS averageBalance",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 27,
+    "source_index": 27,
+    "question": "What is the average balance of CreditCards held by AccountHolders born after 1975?"
+  },
+  {
+    "final_query": "MATCH (f:Flagged {lastName: 'Pelyo'})-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nRETURN avg(l.loanAmount) AS averageLoanAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 28,
+    "source_index": 28,
+    "question": "What is the average loan amount of UnsecuredLoans held by Flagged individuals with last name 'Pelyo'?"
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)\nWHERE ba.balance > 7000\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.limit > 50000\nRETURN DISTINCT ah.fullName AS fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 29,
+    "source_index": 29,
+    "question": "Find all AccountHolders who have both a BankAccount with a balance greater than 7000 and a CreditCard with a limit greater than 50000, and return their full names."
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 8000\nWITH f, collect(b.accountNumber) AS accountNumbers\nWHERE size(accountNumbers) >= 2\nRETURN f.name AS financialInstitute, accountNumbers",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 30,
+    "source_index": 30,
+    "question": "Retrieve the names of FinancialInstitutes that have at least two BankAccounts with balances exceeding 8000, and list the account numbers associated with those accounts."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop) WHERE cc.latePayments > 0 AND s.business = 'expedite compelling paradigms' AND l.firstName = a.firstName AND l.lastName = a.lastName RETURN a.fullName AS accountHolderFullName, p.amount AS purchaseAmount",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 31,
+    "source_index": 31,
+    "question": "Find the AccountHolders who have made purchases from shops with the business type 'expedite compelling paradigms' and have a credit card with late payments greater than 0. Return the full name of the AccountHolder and the amount of the purchase."
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nWHERE p.amount > 4000\nRETURN DISTINCT s.name AS stateName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 32,
+    "source_index": 32,
+    "question": "What are the names of the states where an IP address used for a purchase with amount greater than 4000 is located?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 33,
+    "source_index": 33,
+    "question": "Find AccountHolders whose birth date is '1956-06-21' and have a PhoneNumber provided by 'B Tee'. Return the full name of those AccountHolders."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Padberg and Sons'\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.balance > 3000\nRETURN ah",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 34,
+    "source_index": 34,
+    "question": "Find all AccountHolders who have both a BankAccount at 'Padberg and Sons' and a CreditCard with a balance greater than 3000."
+  },
+  {
+    "final_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login {firstName: 'Marchelle'})-[:FOR_SHOP]->(s:Shop)\nWHERE p.amount > 4000 AND p.date = '2018-02-07'\nRETURN DISTINCT s.name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 35,
+    "source_index": 35,
+    "question": "Retrieve the names of all Shops for which a Login with the first name 'Marchelle' has made a Purchase with an amount greater than 4000 on the date '2018-02-07'."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'KPA Tel'}), (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE u.loanAmount > 5000 RETURN DISTINCT a.UniqueId AS UniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName, u.accountNumber AS accountNumber, u.loanAmount AS loanAmount ORDER BY loanAmount DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 36,
+    "source_index": 36,
+    "question": "Find AccountHolders who have a PhoneNumber provided by 'KPA Tel' and an UnsecuredLoan with a loan amount greater than 5000."
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:SEND]->(t:MoneyTransfer)\nWHERE t.amount > 900 AND t.transactionDate = '2018-02-07'\nRETURN DISTINCT b.accountNumber",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 37,
+    "source_index": 37,
+    "question": "What are the account numbers of BankAccounts that sent MoneyTransfers with an amount greater than 900 on '2018-02-07'?"
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(ad:Address), (a)-[:HAS_SSN]->(s:SSN)\nWHERE ad.state = 'Wisconsin' AND s.ssn STARTS WITH '044'\nRETURN DISTINCT a.fullName AS name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 38,
+    "source_index": 38,
+    "question": "Find the names of all AccountHolders who have an Address in 'Wisconsin' and an SSN that starts with '044'."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 1000 AND cc.balance > 1000\nWITH DISTINCT ah\nRETURN ah.fullName AS name\nORDER BY ah.lastName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 39,
+    "source_index": 39,
+    "question": "Find the names of AccountHolders who have both a BankAccount and a CreditCard with a balance exceeding $1000 and order the results by the AccountHolders' last names."
+  },
+  {
+    "final_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(st:State {name: 'Arkansas'})\nRETURN DISTINCT s.name AS shopName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 40,
+    "source_index": 40,
+    "question": "Retrieve the names of shops for which there exists at least one purchase made from an IP address located in 'Arkansas'."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE p.provider = 'Yellow Mobile' MATCH (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE toFloat(u.APR) > 0.19 RETURN DISTINCT a.fullName AS fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 41,
+    "source_index": 41,
+    "question": "List the full names of AccountHolders who have a PhoneNumber provided by 'Yellow Mobile' and an UnsecuredLoan with an APR greater than 0.19."
+  },
+  {
+    "final_query": "MATCH (mt:MoneyTransfer)-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nMATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE mt.amount > 500 AND p.provider = 'B Tee'\nRETURN DISTINCT fi.name",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 42,
+    "source_index": 42,
+    "question": "Find the names of FinancialInstitutes that have received MoneyTransfers where the amount is greater than $500, and the money transfer was made with a PhoneNumber from 'B Tee'."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nWHERE a.fullName = 'Jorge Girod' OR (a.firstName = 'Jorge' AND a.lastName = 'Girod')\nMATCH (f:Flagged)-[:HAS_ADDRESS]->(addr)\nRETURN DISTINCT f.fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 43,
+    "source_index": 43,
+    "question": "Retrieve the full names of Flagged entities who share the same Address as AccountHolder 'Jorge Girod'."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(:BankAccount)\nMATCH (a)-[:HAS_UNSECUREDLOAN]->(:UnsecuredLoan)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 300.0\nRETURN DISTINCT a.firstName, a.lastName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 44,
+    "source_index": 44,
+    "question": "Find the names of account holders who have both a bank account and an unsecured loan, and also have a credit card with a balance greater than $300."
+  },
+  {
+    "final_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount)-[:SEND]->(mt:MoneyTransfer)\nWHERE mt.amount > 850\nWITH fi, count(DISTINCT ba) AS accountCount\nWHERE accountCount >= 2\nRETURN DISTINCT fi.name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 45,
+    "source_index": 45,
+    "question": "Retrieve the names of financial institutes that have at least two bank accounts associated with money transfers exceeding $850."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'B Tee'})\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard {expirationDate: '06-16'})\nRETURN DISTINCT ah.firstName, ah.lastName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 46,
+    "source_index": 46,
+    "question": "Find the names of account holders who have a phone number from 'B Tee' and also have a credit card with an expiration date of '06-16'."
+  },
+  {
+    "final_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.startDate > 19891020 AND l.startDate < 19891025 AND l.lastName = 'Centanni' RETURN DISTINCT s.name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 47,
+    "source_index": 47,
+    "question": "Identify the shop names for which there are logins created after '19891020' and before '19891025', and the logins have the last name 'Centanni'."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address), (ah)-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nWHERE a.state = 'West Virginia' AND l.loanAmount > 9000\nRETURN DISTINCT ah.fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 48,
+    "source_index": 48,
+    "question": "Find the full names of account holders who have an address in 'West Virginia' and also have an unsecured loan with a loan amount greater than $9000."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 4000.0 AND cc.balance > 4000.0\nRETURN DISTINCT ah",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 49,
+    "source_index": 49,
+    "question": "Find all AccountHolders who have both a BankAccount and a CreditCard with a balance greater than 4000.0."
+  },
+  {
+    "final_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:WITH_CARD]->(bc:BankCard) WHERE bc.limit = 5000.0 RETURN DISTINCT s.name AS name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 50,
+    "source_index": 50,
+    "question": "Retrieve the names of Shops that have logins associated with purchases made using BankCards with a limit of 5000.0."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_PHONENUMBER]->(p:PhoneNumber)\nWHERE toFloat(u.APR) > 0.35 AND p.provider = 'Loud and Clear'\nRETURN DISTINCT a.UniqueId AS uniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName\nORDER BY lastName, firstName",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 51,
+    "source_index": 51,
+    "question": "Find AccountHolders who have an UnsecuredLoan with an APR greater than 0.35 and also have a PhoneNumber provided by 'Loud and Clear'."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address)\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE a.state = 'Washington' AND cc.latePayments > 0.0\nRETURN DISTINCT ah.UniqueId AS UniqueId, ah.fullName AS fullName, ah.birthDate AS birthDate\nORDER BY UniqueId",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 52,
+    "source_index": 52,
+    "question": "List all AccountHolders who have an Address in 'Washington' and a CreditCard with latePayments greater than 0.0."
+  },
+  {
+    "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Dooley, Dooley and Dooley'\nMATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nWHERE s.business = 'deliver wireless niches'\nAND l.firstName = ah.firstName\nAND l.lastName = ah.lastName\nRETURN DISTINCT ah.fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 53,
+    "source_index": 53,
+    "question": "Identify AccountHolders whose BankAccount is associated with 'Dooley, Dooley and Dooley' and who have made purchases from shops with the business 'deliver wireless niches'."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nWITH a, b\nWHERE b.balance > 3000\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 3000\nRETURN DISTINCT a.fullName AS fullName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 54,
+    "source_index": 54,
+    "question": "Find all AccountHolders who have both a BankAccount with a balance greater than $3000 and a CreditCard with a balance greater than $3000, and return their full names."
+  },
+  {
+    "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 2000\nWITH f, count(b) AS qualifyingAccounts\nWHERE qualifyingAccounts >= 2\nRETURN f.name AS financialInstituteName\nORDER BY financialInstituteName",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 55,
+    "source_index": 55,
+    "question": "Retrieve the names of FinancialInstitutes that have at least two BankAccounts with a balance greater than $2000."
+  },
+  {
+    "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber)\nMATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE p.provider = 'B Tee' AND c.latePayments > 0\nRETURN DISTINCT a.fullName",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 56,
+    "source_index": 56,
+    "question": "Find AccountHolders who have a PhoneNumber provided by 'B Tee' and a CreditCard with latePayments greater than 0. Return the full name of those AccountHolders."
+  },
+  {
+    "final_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.mail CONTAINS 'acme.com' WITH s, count(DISTINCT l) AS acmeLogins WHERE acmeLogins >= 2 RETURN s.name",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 57,
+    "source_index": 57,
+    "question": "Identify the Shops for which at least two Logins have a 'acme.com' email address. Return the names of the shops."
+  },
+  {
+    "final_query": "MATCH (c:Country)<-[:PART_OF]-(:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(p:Person)\nWHERE p.healthstatus = 'Sick'\nWITH c, pl.type AS placeType, v.duration.seconds AS secs\nRETURN c.name AS country, avg(CASE WHEN placeType = 'Grocery shop' THEN secs END) AS groceryShopAvgSeconds, avg(secs) AS allPlacesAvgSeconds\nORDER BY country",
+    "selected_trial": 1,
+    "status": "compilation_failed",
+    "stop_reason": "revision_failed",
+    "input_index": 58,
+    "source_index": 58,
+    "question": "For each country, what is the average visit duration in seconds for visits performed by 'Sick' people to 'Grocery shop' places, and how does this compare to the average visit duration across all place types in that country? Show the country name, average duration for 'Grocery shop' visits, and average duration for all visits."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, v, duration.inSeconds(v.duration) AS seconds\nWHERE seconds > 3600\nWITH c.name AS continent, count(v) AS totalVisits, count(DISTINCT p) AS persons, avg(seconds) AS avgVisitDuration\nRETURN continent, toFloat(totalVisits) / persons AS avgVisitsPerPerson, avgVisitDuration\nORDER BY continent",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 59,
+    "source_index": 59,
+    "question": "Considering only visits with a duration greater than 1 hour (3600 seconds), for each continent, calculate the average number of visits per person and the average duration of those visits in seconds. Return the continent name, average visits per person, and average visit duration."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 60,
+    "source_index": 60,
+    "question": "For each type of place, calculate the average duration (in seconds) of visits made by people with 'Healthy' status and the average duration of visits made by people with 'Sick' status. Return the place type, average healthy visit duration, and average sick visit duration."
+  },
+  {
+    "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, count(v) AS totalVisits, avg(duration.inSeconds(v.duration)) AS averageDurationInSeconds\nORDER BY totalVisits DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 61,
+    "source_index": 61,
+    "question": "For each continent, determine the total number of visits and calculate the average visit duration (in seconds). Return the continent name, total visits, and average duration, ordered by the total number of visits in descending order."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit), (v)-[:LOCATED_AT]->(pl:Place), (pl)-[:PART_OF]->(r:Region)\nWHERE v.starttime < p.confirmedtime\nWITH r, p, count(DISTINCT v) AS preConfirmationVisits\nRETURN r.name AS region, avg(preConfirmationVisits) AS avgPreConfirmationVisits",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 62,
+    "source_index": 62,
+    "question": "For each region, calculate the average number of visits performed by persons before their confirmed time. Return the region name and the average number of pre-confirmation visits."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 63,
+    "source_index": 63,
+    "question": "For each country, compute the average visit duration (in seconds) for visits to 'Hospital' places and the average visit duration for visits to 'Park' places. Return the country name, average hospital visit duration, and average park visit duration."
+  },
+  {
+    "final_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(per:Person)\nWITH c, count(DISTINCT v) AS totalVisits, count(DISTINCT CASE WHEN pl.type = 'Mall' AND per.healthstatus = 'Sick' THEN v END) AS sickMallVisits\nRETURN c.name AS continent, toFloat(sickMallVisits) * 100.0 / toFloat(totalVisits) AS sickMallVisitPercentage\nORDER BY sickMallVisitPercentage DESC",
+    "selected_trial": 3,
+    "status": "compilation_failed",
+    "stop_reason": "revision_limit",
+    "input_index": 64,
+    "source_index": 64,
+    "question": "For each continent, calculate the percentage of visits made by 'Sick' persons to 'Mall' places. Return the continent name and the percentage of 'Sick' person visits to 'Mall' places."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)-[:PART_OF]->(country:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalDurationSeconds\nWITH c, avg(visitCount) AS averageVisitCount, sum(totalDurationSeconds) / sum(visitCount) AS averageDurationSeconds\nRETURN c.name AS continent, averageVisitCount, averageDurationSeconds\nORDER BY continent",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 65,
+    "source_index": 65,
+    "question": "For each continent, find the average number of visits performed by persons with 'Sick' health status and the average visit duration in seconds. Return the continent name, average visit count, and average duration."
+  },
+  {
+    "final_query": "MATCH (visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE visit.starttime < datetime('2020-04-26T00:00:00Z')\nRETURN place.type AS placeType,\n       count(*) AS totalVisitCount,\n       avg(durationInSeconds(visit.duration)) AS averageDurationSeconds",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 66,
+    "source_index": 66,
+    "question": "For each type of place, calculate the total number of visits and the average duration of visits that started before '2020-04-26 T 00:00:00 UTC'. Return the place type, total visit count, and average duration in seconds."
+  },
+  {
+    "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nMATCH (v)<-[:PERFORMS_VISIT]-(person:Person)\nWITH r.name AS region, count(DISTINCT v) AS totalVisits\nMATCH (sv:Visit)-[:LOCATED_AT]->(sp:Place)-[:PART_OF]->(sr:Region)\nMATCH (sv)<-[:PERFORMS_VISIT]-(sickPerson:Person)\nWHERE sr.name = region AND sickPerson.healthstatus = 'Sick'\nWITH region, totalVisits, count(DISTINCT sv) AS sickVisits\nRETURN region, toFloat(sickVisits) * 100.0 / totalVisits AS sickVisitPercentage\nORDER BY sickVisitPercentage DESC",
+    "selected_trial": 3,
+    "status": "compiled",
+    "stop_reason": "revision_limit",
+    "input_index": 67,
+    "source_index": 67,
+    "question": "For each region, determine the percentage of visits made by people with 'Sick' healthstatus. Return the region name and the percentage of visits by sick people."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 68,
+    "source_index": 68,
+    "question": "For each continent, calculate the average number of visits per person and the average duration of visits in seconds. Return the continent name, average visits per person, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWHERE p.confirmedtime < datetime('2020-04-21T00:00:00Z')\nRETURN c.name AS country, avg(duration.inSeconds(v.duration)) AS averageVisitDurationInSeconds\nORDER BY country",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 69,
+    "source_index": 69,
+    "question": "For each country, calculate the average visit duration in seconds for visits performed by people who were confirmed to be sick before '2020-04-21 T 00:00:00 UTC'. Return the country name and the average visit duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)\nWITH p.healthstatus AS healthStatus, p.id AS personId,\n     count(v) AS visitCount,\n     sum(v.duration.days * 86400 + v.duration.hours * 3600 + v.duration.minutes * 60 + v.duration.seconds) AS totalDurationSeconds\nRETURN healthStatus, avg(visitCount) AS avgVisitCount,\n       toFloat(sum(totalDurationSeconds)) / sum(visitCount) AS avgVisitDurationSeconds",
+    "selected_trial": 3,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 70,
+    "source_index": 70,
+    "question": "For each person's health status, determine the average number of visits performed and the average duration of those visits in seconds. Return the health status, average visit count, and average visit duration."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 71,
+    "source_index": 71,
+    "question": "For each continent, determine the average visit duration in seconds for visits to each type of place. Return the continent name, place type, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalSeconds\nWITH region, avg(visitCount) AS avgVisits, sum(totalSeconds) / sum(visitCount) AS avgVisitDurationSeconds\nRETURN region, avgVisits, avgVisitDurationSeconds",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 72,
+    "source_index": 72,
+    "question": "For each region, calculate the average number of visits made by persons with 'Sick' healthstatus and the average duration of those visits in seconds. Return the region name, average number of visits, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (person:Person)-[v:VISITS]->(p:Place)\nOPTIONAL MATCH (p)-[:PART_OF]->(c:Country)\nOPTIONAL MATCH (p)-[:PART_OF]->(:Region)-[:PART_OF]->(c2:Country)\nWITH coalesce(c.name, c2.name) AS country,\n  count(v) AS totalVisits,\n  sum(CASE WHEN person.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits,\n  avg(v.duration.inSeconds) AS averageDurationSeconds\nRETURN country,\n  toFloat(sickVisits) / toFloat(totalVisits) AS visitRatio,\n  averageDurationSeconds",
+    "selected_trial": 2,
+    "status": "compilation_failed",
+    "stop_reason": "revision_failed",
+    "input_index": 73,
+    "source_index": 73,
+    "question": "For each country, calculate the ratio of 'Sick' persons' visits to the total visits, and then determine the average visit duration in seconds for all visits. Return the country name, visit ratio, and average duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH p.healthstatus AS healthstatus, pl.type AS placetype, p, count(v) AS visits\nRETURN healthstatus, placetype, avg(visits) AS averageVisits",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 74,
+    "source_index": 74,
+    "question": "For each person health status, find the average number of visits made to each type of place. Return the health status, the place type, and the average number of visits."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, avg(duration.inSeconds(v.duration)) AS average_duration_seconds",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 75,
+    "source_index": 75,
+    "question": "For each region, calculate the average duration (in seconds) of visits performed by persons with 'Sick' health status. Return the region name and the average duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(rg:Region)-[:PART_OF]->(c:Country)\nWHERE v.starttime < p.confirmedtime\nWITH c.name AS country_name, p.healthstatus AS health_status, p, count(DISTINCT v) AS pre_confirmation_visits\nRETURN country_name, health_status, avg(pre_confirmation_visits) AS avg_pre_confirmation_visits\nORDER BY country_name, health_status",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 76,
+    "source_index": 76,
+    "question": "For each country, determine the average number of visits performed by persons before their confirmed time, grouped by their health status. Return the country name, health status, and the average number of pre-confirmation visits."
+  },
+  {
+    "final_query": "MATCH (sickPerson:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nRETURN continent.name AS ContinentName, place.type AS PlaceType, avg(duration.inSeconds(visit.duration)) AS AvgVisitDurationSeconds\nORDER BY ContinentName, PlaceType",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "repeated_query",
+    "input_index": 77,
+    "source_index": 77,
+    "question": "For each continent, calculate the average visit duration (in seconds) for each type of place, considering only visits made by persons with a 'Sick' health status. Return the continent name, place type, and the average duration."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 78,
+    "source_index": 78,
+    "question": "For each type of place, find the average visit duration in seconds and the number of people who visited that place type with a 'Sick' health status. Return the place type, average duration, and the count of sick visitors."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 79,
+    "source_index": 79,
+    "question": "For each continent, calculate the average duration of visits in seconds and the number of distinct persons who performed visits in that continent. Return the continent name, average visit duration, and distinct person count."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r, avg(duration.inSeconds(v.duration)) AS avg_duration, count(v) AS total_visits\nRETURN r.name AS region_name, avg_duration, total_visits",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 80,
+    "source_index": 80,
+    "question": "For each region, find the average visit duration in seconds and the total number of visits made by persons with 'Healthy' status. Return the region name, average duration, and total healthy visits."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 81,
+    "source_index": 81,
+    "question": "For each country, calculate the average visit duration in seconds for visits occurring before '2020-04-30', and count the number of distinct places visited. Return the country name, average duration, and distinct place count."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(co:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, pl.type AS placeType, avg(duration.inSeconds(v.duration)) AS averageDuration\nORDER BY continent ASC, averageDuration DESC",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 82,
+    "source_index": 82,
+    "question": "For each continent, calculate the average visit duration in seconds for each type of place. Return the continent name, place type, and average duration, ordering the results by continent and then by average duration in descending order."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH pl.type AS placeType, avg(duration.inSeconds(v.duration)) AS avgVisitDurationSeconds, count(DISTINCT p) AS distinctPersons\nRETURN placeType, avgVisitDurationSeconds, distinctPersons\nORDER BY placeType",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 83,
+    "source_index": 83,
+    "question": "For each type of place, calculate the average visit duration in seconds and the number of distinct persons who visited that type of place. Return the place type, average visit duration, and the number of distinct persons."
+  },
+  {
+    "final_query": "MATCH (person:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nWHERE place.type = 'Grocery shop'\nRETURN continent.name AS continent, avg(duration.inSeconds(visit.duration)) AS averageVisitDurationSeconds\nORDER BY continent",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 84,
+    "source_index": 84,
+    "question": "For each continent, determine the average visit duration in seconds for visits performed by persons with 'Healthy' health status to 'Grocery shop' places. Return the continent name and the average visit duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(DISTINCT v) AS visitCount\nWITH region, collect(visitCount) AS visitCounts, avg(visitCount) AS averageVisits\nRETURN region AS regionName, size([c IN visitCounts WHERE c > averageVisits]) AS aboveAveragePersonCount\nORDER BY regionName",
+    "selected_trial": 3,
+    "status": "compilation_failed",
+    "stop_reason": "revision_limit",
+    "input_index": 85,
+    "source_index": 85,
+    "question": "For each region, calculate the average number of visits performed by each person and the total number of persons who performed more than the average number of visits. Return the region name and the count of persons with above-average visits."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime > datetime('2020-04-20') AND pl.type = 'Restaurant' RETURN c.name AS country, avg(duration.inSeconds(v.duration).seconds) AS avg_visit_duration_seconds ORDER BY country",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 86,
+    "source_index": 86,
+    "question": "For each country, find the average duration in seconds of visits to 'Restaurant' places made by persons whose confirmed time is after '2020-04-20'. Return the country name and the average visit duration."
+  },
+  {
+    "final_query": "CALL {\n  MATCH (p:Person)-[v:VISITS]->(pl:Place)\n  WHERE pl.type = 'Grocery shop'\n  WITH p, count(v) AS visitsPerPerson\n  RETURN avg(visitsPerPerson) AS avgGroceryShopVisits\n}\nCALL {\n  MATCH (p:Person)-[v:VISITS]->(pl:Place)\n  WHERE pl.type = 'Restaurant'\n  WITH p, count(v) AS visitsPerPerson\n  RETURN avg(visitsPerPerson) AS avgRestaurantVisits\n}\nRETURN avgGroceryShopVisits AS avgGroceryShopVisits, avgRestaurantVisits AS avgRestaurantVisits, (avgGroceryShopVisits - avgRestaurantVisits) / ((avgGroceryShopVisits + avgRestaurantVisits) / 2.0) * 100 AS percentageDifference",
+    "selected_trial": 3,
+    "status": "compilation_failed",
+    "stop_reason": "revision_limit",
+    "input_index": 87,
+    "source_index": 87,
+    "question": "Calculate the average number of visits per person to 'Grocery shop' places and the average number of visits per person to 'Restaurant' places. Then, determine the percentage difference between these two averages."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 88,
+    "source_index": 88,
+    "question": "For each continent, determine the average number of visits performed by people with 'Healthy' health status and the average duration of those visits in seconds. Return the continent name, average number of visits, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (person:Person)-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE place.type = 'Mall'\nWITH person.healthstatus AS healthStatus, avg(visit.duration.seconds) AS averageDurationSeconds\nRETURN healthStatus, averageDurationSeconds",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 89,
+    "source_index": 89,
+    "question": "Calculate the average visit duration in seconds for visits to 'Mall' type places, grouped by the health status of the person performing the visit. Return the health status and the average duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime < datetime('2020-04-15') RETURN c.name AS country, count(v) AS totalVisits, avg(duration.inSeconds(v.duration)) AS averageDurationSeconds",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 90,
+    "source_index": 90,
+    "question": "For each country, compute the total number of visits and the average duration (in seconds) of visits performed by people whose confirmed time is before '2020-04-15'. Return the country name, total visit count, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nWITH r, COUNT(v) AS totalVisits, SUM(CASE WHEN p.type = 'Mall' THEN 1 ELSE 0 END) AS mallVisits\nRETURN r.name AS region, ROUND(100.0 * mallVisits / totalVisits, 2) AS mallVisitPercentage\nORDER BY region",
+    "selected_trial": 3,
+    "status": "compilation_failed",
+    "stop_reason": "revision_limit",
+    "input_index": 91,
+    "source_index": 91,
+    "question": "For each region, calculate the percentage of visits that occurred at 'Mall' type places. Return the region name and the percentage of visits at malls."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, count(v) AS totalVisits, avg(v.duration.inSeconds) AS averageDuration",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 92,
+    "source_index": 92,
+    "question": "For each region, calculate the total number of visits and the average duration in seconds of visits performed by persons whose health status is 'Sick'. Return the region name, total visits, and average duration."
+  },
+  {
+    "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWITH c.name AS country, v\nRETURN country, toFloat(sum(CASE WHEN v.starttime < datetime('2020-05-01T00:00:00Z') THEN 1 ELSE 0 END)) / toFloat(count(v)) AS ratio\nORDER BY country",
+    "selected_trial": 3,
+    "status": "compilation_failed",
+    "stop_reason": "revision_limit",
+    "input_index": 93,
+    "source_index": 93,
+    "question": "For each country, compute the ratio of visits occurring before '2020-05-01 T00:00:00 UTC' to the total number of visits. Return the country name and the calculated ratio."
+  },
+  {
+    "final_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(p:Place)<-[v:VISITS]-(person:Person)\nWITH c, person, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS personDurationSeconds\nWITH c, sum(visitCount) AS totalVisits, count(person) AS personCount, sum(personDurationSeconds) AS totalDurationSeconds\nRETURN c.name AS continent,\n       toFloat(totalVisits) / toFloat(personCount) AS avgVisitsPerPerson,\n       toFloat(totalDurationSeconds) / toFloat(totalVisits) AS avgVisitDurationSeconds\nORDER BY continent",
+    "selected_trial": 2,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 94,
+    "source_index": 94,
+    "question": "For each continent, calculate the average number of visits per person and the average duration in seconds of those visits. Return the continent name, average visits per person, and average visit duration."
+  },
+  {
+    "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS personDurationSeconds\nWITH c, avg(visitCount) AS averageNumberOfVisits, sum(personDurationSeconds) AS totalDurationSeconds, sum(visitCount) AS totalVisits\nRETURN c.name AS continentName, averageNumberOfVisits AS averageNumberOfVisits, toFloat(totalDurationSeconds) / totalVisits AS averageVisitDurationSeconds",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 95,
+    "source_index": 95,
+    "question": "For each continent, calculate the average number of visits performed by persons with 'Sick' health status and the average duration (in seconds) of these visits. Return the continent name, average number of visits, and average visit duration."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 96,
+    "source_index": 96,
+    "question": "For each type of place, determine the average visit duration (in seconds) and the percentage of visits made by persons confirmed to be sick after the visit started. Return the place type, average duration, and percentage of visits made by persons confirmed sick after the visit."
+  },
+  {
+    "final_query": "MATCH (person:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)\nRETURN region.name AS regionName, avg(visit.duration.seconds) AS averageVisitDurationSeconds, count(DISTINCT place) AS totalDistinctPlacesVisited",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 97,
+    "source_index": 97,
+    "question": "For each region, compute the average duration (in seconds) of visits made by persons whose health status is 'Sick', and also calculate the total number of distinct places visited by these persons. Return the region name, average visit duration, and total distinct places visited."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 98,
+    "source_index": 98,
+    "question": "For each country, determine the average number of visits performed by each person and the average duration (in seconds) of those visits. Return the country name, the average visits per person, and the average visit duration."
+  },
+  {
+    "final_query": null,
+    "selected_trial": null,
+    "status": "failed",
+    "stop_reason": "query_error",
+    "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+    "input_index": 99,
+    "source_index": 99,
+    "question": "For each continent, calculate the total number of persons who have visited at least two different types of places and the average visit duration (in seconds) for those persons. Return the continent name, the count of persons, and the average visit duration."
+  }
+]

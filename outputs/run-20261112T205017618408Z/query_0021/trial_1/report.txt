@@ -1,0 +1,11 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a:AccountHolder). Every matching relationship identity is a separate witness; rows may multiply. New row slots: a.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Row binding slots: a
+  Variables visible after clause: a
+Compilation stopped: Clause 2 (Match): OPTIONAL MATCH is not supported yet: 'Match'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

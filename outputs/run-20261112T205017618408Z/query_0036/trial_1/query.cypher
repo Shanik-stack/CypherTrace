@@ -1,0 +1,1 @@
+MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'KPA Tel'}), (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE u.loanAmount > 5000 RETURN DISTINCT a.UniqueId AS UniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName, u.accountNumber AS accountNumber, u.loanAmount AS loanAmount ORDER BY loanAmount DESC

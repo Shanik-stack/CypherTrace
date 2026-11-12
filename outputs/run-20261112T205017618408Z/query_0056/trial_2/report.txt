@@ -1,0 +1,32 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_PHONENUMBER]->(p); constraints: a:AccountHolder AND p:PhoneNumber. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, p, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_PHONENUMBER (AccountHolder -> PhoneNumber, OUTGOING): listed signature compatible
+  Row binding slots: a, p, @rel
+  Variables visible after clause: a, p
+S2 ← S1 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_CREDITCARD]->(c); constraints: a:AccountHolder AND c:CreditCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: c, @rel@1.
+  μ_2(x,w) = μ_1(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible
+  Row binding slots: a, p, @rel, c, @rel@1
+S3 ← S2 | clause 2 | WHERE
+  Keep rows only if (p.provider = 'B Tee' AND c.latePayments > 0) is TRUE (FALSE and NULL are removed).
+  μ_3(x) = μ_2(x) × [(p.provider = 'B Tee' AND c.latePayments > 0) is TRUE]
+  Schema evidence: p.provider: listed on PhoneNumber (STRING); c.latePayments: listed on CreditCard (FLOAT)
+  Row binding slots: a, p, @rel, c, @rel@1
+  Variables visible after clause: a, p, c
+S4 ← S3 | clause 3 | PROJECT
+  Output @computed:3:0 = a.fullName. Equal projected rows retain summed multiplicities. Collapsed row slots: a, p, @rel, c, @rel@1.
+  μ_4(y) = Σ_{x: project(x)=y} μ_3(x)
+  Schema evidence: a.fullName: listed on AccountHolder (STRING)
+  Row binding slots: @computed:3:0
+S5 ← S4 | clause 3 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_5(y) = 1 if μ_4(y) > 0, otherwise 0
+  Row binding slots: @computed:3:0
+  Variables visible after clause: (none)
+  Names leaving scope: a, p, c
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

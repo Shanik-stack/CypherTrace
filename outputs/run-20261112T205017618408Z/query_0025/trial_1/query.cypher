@@ -1,0 +1,1 @@
+MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute) WHERE f.website CONTAINS 'com' RETURN avg(b.balance)

@@ -1,0 +1,22 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_CREDITCARD]->(c); constraints: a:AccountHolder AND c:CreditCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, c, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible
+  Row binding slots: a, c, @rel
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if a.birthDate >= '1976' is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [a.birthDate >= '1976' is TRUE]
+  Schema evidence: a.birthDate: listed on AccountHolder (STRING)
+  Row binding slots: a, c, @rel
+  Variables visible after clause: a, c
+S3 ← S2 | clause 2 | AGGREGATE
+  Form one global group, including an empty-input group; compute AVG(c.balance); output averageBalance. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: a, c, @rel.
+  AVG(c.balance) = Σ μ_2(x)·c.balance(x) / Σ μ_2(x), over non-NULL c.balance; NULL if denominator is 0
+  Schema evidence: c.balance: listed on CreditCard (FLOAT)
+  Row binding slots: averageBalance
+  Variables visible after clause: averageBalance
+  Names leaving scope: a, c
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,56 @@
+Compilation: compiled; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (v)-[:LOCATED_AT]->(p), (p)-[:PART_OF]->(r); constraints: v:Visit AND p:Place AND r:Region. Every matching relationship identity is a separate witness; rows may multiply. New row slots: v, p, r, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible
+  Row binding slots: v, p, r, @rel, @rel@1
+  Variables visible after clause: v, p, r
+S2 ← S1 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (v)<-[:PERFORMS_VISIT]-(person); constraints: person:Person. Every matching relationship identity is a separate witness; rows may multiply. New row slots: person, @rel@2.
+  μ_2(x,w) = μ_1(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Visit -> Person, INCOMING): listed signature compatible
+  Row binding slots: v, p, r, @rel, @rel@1, person, @rel@2
+  Variables visible after clause: v, p, r, person
+S3 ← S2 | clause 3 | AGGREGATE
+  Form group by r.name; compute COUNT(DISTINCT v); output region, totalVisits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: v, p, r, @rel, @rel@1, person, @rel@2.
+  COUNT(DISTINCT v): deduplicate non-NULL argument values within each group
+  Schema evidence: r.name: listed on Region (STRING)
+  Row binding slots: region, totalVisits
+  Variables visible after clause: region, totalVisits
+  Names leaving scope: v, p, r, person
+S4 ← S3 | clause 4 | MATCH
+  For each incoming row, enumerate compatible assignments to (sv)-[:LOCATED_AT]->(sp), (sp)-[:PART_OF]->(sr); constraints: sv:Visit AND sp:Place AND sr:Region. Every matching relationship identity is a separate witness; rows may multiply. New row slots: sv, sp, sr, @rel@3, @rel@4.
+  μ_4(x,w) = μ_3(x) × [pattern(x,w)]
+  Schema evidence: LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible
+  Row binding slots: @computed:2:0, @computed:2:1, sv, sp, sr, @rel@3, @rel@4
+  Variables visible after clause: region, totalVisits, sv, sp, sr
+S5 ← S4 | clause 5 | MATCH
+  For each incoming row, enumerate compatible assignments to (sv)<-[:PERFORMS_VISIT]-(sickPerson); constraints: sickPerson:Person. Every matching relationship identity is a separate witness; rows may multiply. New row slots: sickPerson, @rel@5.
+  μ_5(x,w) = μ_4(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Visit -> Person, INCOMING): listed signature compatible
+  Row binding slots: @computed:2:0, @computed:2:1, sv, sp, sr, @rel@3, @rel@4, sickPerson, @rel@5
+S6 ← S5 | clause 5 | WHERE
+  Keep rows only if (sr.name = $computed:2:0 AND sickPerson.healthstatus = 'Sick') is TRUE (FALSE and NULL are removed).
+  μ_6(x) = μ_5(x) × [(sr.name = $computed:2:0 AND sickPerson.healthstatus = 'Sick') is TRUE]
+  Schema evidence: sr.name: listed on Region (STRING); sickPerson.healthstatus: listed on Person (STRING)
+  Row binding slots: @computed:2:0, @computed:2:1, sv, sp, sr, @rel@3, @rel@4, sickPerson, @rel@5
+  Variables visible after clause: region, totalVisits, sv, sp, sr, sickPerson
+S7 ← S6 | clause 6 | AGGREGATE
+  Form group by $computed:2:0, $computed:2:1; compute COUNT(DISTINCT sv); output region, totalVisits, sickVisits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: sv, sp, sr, @rel@3, @rel@4, sickPerson, @rel@5.
+  COUNT(DISTINCT sv): deduplicate non-NULL argument values within each group
+  Row binding slots: region, totalVisits, sickVisits
+  Variables visible after clause: region, totalVisits, sickVisits
+  Names leaving scope: sv, sp, sr, sickPerson
+S8 ← S7 | clause 7 | PROJECT
+  Output region = $computed:2:0, sickVisitPercentage = ((toFloat($computed:6:2) * 100.0) / $computed:2:1). Equal projected rows retain summed multiplicities.
+  μ_8(y) = Σ_{x: project(x)=y} μ_7(x)
+  Mathematics incomplete: Function toFloat() has no registered semantic contract
+S9 ← S8 | clause 7 | ORDER
+  Order by $computed:7:1 DESC; row counts are unchanged. Ties have unspecified order.
+  μ_9 = μ_8 (ordering metadata changes)
+  Variables visible after clause: region, sickVisitPercentage
+  Names leaving scope: totalVisits, sickVisits
+  Mathematics incomplete: Function toFloat() has no registered semantic contract
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

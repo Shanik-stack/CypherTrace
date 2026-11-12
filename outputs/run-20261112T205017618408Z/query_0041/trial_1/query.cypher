@@ -1,0 +1,1 @@
+MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE p.provider = 'Yellow Mobile' MATCH (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE toFloat(u.APR) > 0.19 RETURN DISTINCT a.fullName AS fullName

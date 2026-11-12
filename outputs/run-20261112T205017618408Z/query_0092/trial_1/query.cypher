@@ -1,0 +1,2 @@
+MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)
+RETURN r.name AS region, count(v) AS totalVisits, avg(v.duration.inSeconds) AS averageDuration

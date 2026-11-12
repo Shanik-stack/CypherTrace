@@ -1,0 +1,27 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (person)-[:PERFORMS_VISIT]->(visit), (visit)-[:LOCATED_AT]->(place); constraints: person:Person AND visit:Visit AND place:Place. Every matching relationship identity is a separate witness; rows may multiply. New row slots: person, visit, place, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Person -> Visit, OUTGOING): listed signature compatible; LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible
+  Row binding slots: person, visit, place, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if place.type = 'Mall' is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [place.type = 'Mall' is TRUE]
+  Schema evidence: place.type: listed on Place (STRING)
+  Row binding slots: person, visit, place, @rel, @rel@1
+  Variables visible after clause: person, visit, place
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by person.healthstatus; compute AVG(visit.duration.seconds); output healthStatus, averageDurationSeconds. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: person, visit, place, @rel, @rel@1.
+  AVG(visit.duration.seconds) = Σ μ_2(x)·visit.duration.seconds(x) / Σ μ_2(x), over non-NULL visit.duration.seconds; NULL if denominator is 0
+  Schema evidence: person.healthstatus: listed on Person (STRING); visit.duration: listed on Visit (DURATION)
+  Row binding slots: healthStatus, averageDurationSeconds
+  Variables visible after clause: healthStatus, averageDurationSeconds
+  Names leaving scope: person, visit, place
+S4 ← S3 | clause 3 | PROJECT
+  Output healthStatus = $computed:2:0, averageDurationSeconds = $computed:2:1. Equal projected rows retain summed multiplicities.
+  μ_4(y) = Σ_{x: project(x)=y} μ_3(x)
+  Row binding slots: healthStatus, averageDurationSeconds
+  Variables visible after clause: healthStatus, averageDurationSeconds
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

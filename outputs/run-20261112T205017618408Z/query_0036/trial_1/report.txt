@@ -1,0 +1,30 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_PHONENUMBER]->(p), (a)-[:HAS_UNSECUREDLOAN]->(u); constraints: a:AccountHolder AND p:PhoneNumber AND p.provider = 'KPA Tel' AND u:UnsecuredLoan. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, p, u, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_PHONENUMBER (AccountHolder -> PhoneNumber, OUTGOING): listed signature compatible; HAS_UNSECUREDLOAN (AccountHolder -> UnsecuredLoan, OUTGOING): listed signature compatible; p.provider: listed on PhoneNumber (STRING)
+  Row binding slots: a, p, u, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if u.loanAmount > 5000 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [u.loanAmount > 5000 is TRUE]
+  Schema evidence: u.loanAmount: listed on UnsecuredLoan (FLOAT)
+  Row binding slots: a, p, u, @rel, @rel@1
+  Variables visible after clause: a, p, u
+S3 ← S2 | clause 2 | PROJECT
+  Output UniqueId = a.UniqueId, firstName = a.firstName, lastName = a.lastName, fullName = a.fullName, accountNumber = u.accountNumber, loanAmount = u.loanAmount. Equal projected rows retain summed multiplicities. Collapsed row slots: a, p, u, @rel, @rel@1.
+  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)
+  Schema evidence: a.UniqueId: listed on AccountHolder (STRING); a.firstName: listed on AccountHolder (STRING); a.lastName: listed on AccountHolder (STRING); a.fullName: listed on AccountHolder (STRING); u.accountNumber: listed on UnsecuredLoan (STRING); u.loanAmount: listed on UnsecuredLoan (FLOAT)
+  Row binding slots: UniqueId, firstName, lastName, fullName, accountNumber, loanAmount
+S4 ← S3 | clause 2 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_4(y) = 1 if μ_3(y) > 0, otherwise 0
+  Row binding slots: @computed:2:0, @computed:2:1, @computed:2:2, @computed:2:3, @computed:2:4, @computed:2:5
+S5 ← S4 | clause 2 | ORDER
+  Order by $computed:2:5 DESC; row counts are unchanged. Ties have unspecified order.
+  μ_5 = μ_4 (ordering metadata changes)
+  Row binding slots: @computed:2:0, @computed:2:1, @computed:2:2, @computed:2:3, @computed:2:4, @computed:2:5
+  Variables visible after clause: UniqueId, firstName, lastName, fullName, accountNumber, loanAmount
+  Names leaving scope: a, p, u
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

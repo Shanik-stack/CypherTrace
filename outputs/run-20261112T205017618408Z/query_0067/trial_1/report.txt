@@ -1,0 +1,18 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (v)-[:LOCATED_AT]->(p), (p)-[:PART_OF]->(r); constraints: v:Visit AND p:Place AND r:Region. Every matching relationship identity is a separate witness; rows may multiply. New row slots: v, p, r, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible
+  Row binding slots: v, p, r, @rel, @rel@1
+  Variables visible after clause: v, p, r
+S2 ← S1 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (v)<-[:PERFORMS_VISIT]-(person); constraints: person:Person. Every matching relationship identity is a separate witness; rows may multiply. New row slots: person, @rel@2.
+  μ_2(x,w) = μ_1(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Visit -> Person, INCOMING): listed signature compatible
+  Row binding slots: v, p, r, @rel, @rel@1, person, @rel@2
+  Variables visible after clause: v, p, r, person
+Compilation stopped: Clause 3 (With): Value AST type is not supported yet: 'Case'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

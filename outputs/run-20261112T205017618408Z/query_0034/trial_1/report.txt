@@ -1,0 +1,32 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (ah)-[:HAS_BANKACCOUNT]->(ba), (ba)-[:FROM]->(fi); constraints: ah:AccountHolder AND ba:BankAccount AND fi:FinancialInstitute. Every matching relationship identity is a separate witness; rows may multiply. New row slots: ah, ba, fi, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_BANKACCOUNT (AccountHolder -> BankAccount, OUTGOING): listed signature compatible; FROM (BankAccount -> FinancialInstitute, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, fi, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if fi.name = 'Padberg and Sons' is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [fi.name = 'Padberg and Sons' is TRUE]
+  Schema evidence: fi.name: listed on FinancialInstitute (STRING)
+  Row binding slots: ah, ba, fi, @rel, @rel@1
+  Variables visible after clause: ah, ba, fi
+S3 ← S2 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (ah)-[:HAS_CREDITCARD]->(cc); constraints: cc:CreditCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: cc, @rel@2.
+  μ_3(x,w) = μ_2(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, fi, @rel, @rel@1, cc, @rel@2
+S4 ← S3 | clause 2 | WHERE
+  Keep rows only if cc.balance > 3000 is TRUE (FALSE and NULL are removed).
+  μ_4(x) = μ_3(x) × [cc.balance > 3000 is TRUE]
+  Schema evidence: cc.balance: listed on CreditCard (FLOAT)
+  Row binding slots: ah, ba, fi, @rel, @rel@1, cc, @rel@2
+  Variables visible after clause: ah, ba, fi, cc
+S5 ← S4 | clause 3 | PROJECT
+  Output ah = ah. Equal projected rows retain summed multiplicities. Collapsed row slots: ba, fi, @rel, @rel@1, cc, @rel@2.
+  μ_5(y) = Σ_{x: project(x)=y} μ_4(x)
+  Row binding slots: ah
+  Variables visible after clause: ah
+  Names leaving scope: ba, fi, cc
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

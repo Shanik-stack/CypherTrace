@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 88,
+  "source_index": 88,
+  "question": "For each continent, determine the average number of visits performed by people with 'Healthy' health status and the average duration of those visits in seconds. Return the continent name, average number of visits, and average visit duration."
+}

@@ -1,0 +1,37 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (ah)-[:HAS_BANKACCOUNT]->(ba); constraints: ah:AccountHolder AND ba:BankAccount. Every matching relationship identity is a separate witness; rows may multiply. New row slots: ah, ba, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_BANKACCOUNT (AccountHolder -> BankAccount, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, @rel
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if ba.balance > 7000 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [ba.balance > 7000 is TRUE]
+  Schema evidence: ba.balance: listed on BankAccount (FLOAT)
+  Row binding slots: ah, ba, @rel
+  Variables visible after clause: ah, ba
+S3 ← S2 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (ah)-[:HAS_CREDITCARD]->(cc); constraints: cc:CreditCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: cc, @rel@1.
+  μ_3(x,w) = μ_2(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, @rel, cc, @rel@1
+S4 ← S3 | clause 2 | WHERE
+  Keep rows only if cc.limit > 50000 is TRUE (FALSE and NULL are removed).
+  μ_4(x) = μ_3(x) × [cc.limit > 50000 is TRUE]
+  Schema evidence: cc.limit: listed on CreditCard (FLOAT)
+  Row binding slots: ah, ba, @rel, cc, @rel@1
+  Variables visible after clause: ah, ba, cc
+S5 ← S4 | clause 3 | PROJECT
+  Output fullName = ah.fullName. Equal projected rows retain summed multiplicities. Collapsed row slots: ah, ba, @rel, cc, @rel@1.
+  μ_5(y) = Σ_{x: project(x)=y} μ_4(x)
+  Schema evidence: ah.fullName: listed on AccountHolder (STRING)
+  Row binding slots: fullName
+S6 ← S5 | clause 3 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_6(y) = 1 if μ_5(y) > 0, otherwise 0
+  Row binding slots: @computed:4:0
+  Variables visible after clause: fullName
+  Names leaving scope: ah, ba, cc
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

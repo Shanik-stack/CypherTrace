@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 81,
+  "source_index": 81,
+  "question": "For each country, calculate the average visit duration in seconds for visits occurring before '2020-04-30', and count the number of distinct places visited. Return the country name, average duration, and distinct place count."
+}

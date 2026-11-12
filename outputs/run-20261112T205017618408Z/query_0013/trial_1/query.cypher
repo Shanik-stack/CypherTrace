@@ -1,0 +1,1 @@
+MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber) RETURN p.provider AS provider, avg(t.amount) AS averageAmount ORDER BY averageAmount DESC

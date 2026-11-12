@@ -1,0 +1,1 @@
+MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber {provider: 'B Tee'}) RETURN avg(t.amount) AS averageAmount

@@ -1,0 +1,33 @@
+Compilation: compiled; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (b)-[:FROM]->(f); constraints: b:BankAccount AND f:FinancialInstitute. Every matching relationship identity is a separate witness; rows may multiply. New row slots: b, f, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: FROM (BankAccount -> FinancialInstitute, OUTGOING): listed signature compatible
+  Row binding slots: b, f, @rel
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if b.balance > 8000 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [b.balance > 8000 is TRUE]
+  Schema evidence: b.balance: listed on BankAccount (FLOAT)
+  Row binding slots: b, f, @rel
+  Variables visible after clause: b, f
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by f; compute COLLECT(b.accountNumber); output f, accountNumbers. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities.
+  COLLECT(b.accountNumber): aggregate over non-NULL values within each group
+  Schema evidence: b.accountNumber: listed on BankAccount (STRING)
+  Mathematics incomplete: collect() produces a list whose order cannot be inferred from bag multiplicities; ordered collection semantics must be interpreted separately
+S4 ← S3 | clause 2 | WHERE
+  Keep rows only if size($computed:2:1) >= 2 is TRUE (FALSE and NULL are removed).
+  μ_4(x) = μ_3(x) × [size($computed:2:1) >= 2 is TRUE]
+  Variables visible after clause: f, accountNumbers
+  Names leaving scope: b
+  Mathematics incomplete: collect() produces a list whose order cannot be inferred from bag multiplicities; ordered collection semantics must be interpreted separately
+S5 ← S4 | clause 3 | PROJECT
+  Output financialInstitute = f.name, accountNumbers = $computed:2:1. Equal projected rows retain summed multiplicities.
+  μ_5(y) = Σ_{x: project(x)=y} μ_4(x)
+  Schema evidence: f.name: listed on FinancialInstitute (STRING)
+  Variables visible after clause: financialInstitute, accountNumbers
+  Names leaving scope: f
+  Mathematics incomplete: collect() produces a list whose order cannot be inferred from bag multiplicities; ordered collection semantics must be interpreted separately
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

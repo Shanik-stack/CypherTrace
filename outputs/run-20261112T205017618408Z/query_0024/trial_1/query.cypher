@@ -1,0 +1,1 @@
+MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard) RETURN avg(c.balance) AS averageBalance, count(DISTINCT c) AS totalCreditCards

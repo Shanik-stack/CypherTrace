@@ -1,0 +1,37 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (ah)-[:HAS_BANKACCOUNT]->(ba), (ba)-[:FROM]->(fi); constraints: ah:AccountHolder AND ba:BankAccount AND fi:FinancialInstitute. Every matching relationship identity is a separate witness; rows may multiply. New row slots: ah, ba, fi, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_BANKACCOUNT (AccountHolder -> BankAccount, OUTGOING): listed signature compatible; FROM (BankAccount -> FinancialInstitute, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, fi, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if fi.name = 'Dooley, Dooley and Dooley' is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [fi.name = 'Dooley, Dooley and Dooley' is TRUE]
+  Schema evidence: fi.name: listed on FinancialInstitute (STRING)
+  Row binding slots: ah, ba, fi, @rel, @rel@1
+  Variables visible after clause: ah, ba, fi
+S3 ← S2 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:WITH_LOGIN]->(l), (l)-[:FOR_SHOP]->(s); constraints: p:Purchase AND l:Login AND s:Shop. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, l, s, @rel@2, @rel@3.
+  μ_3(x,w) = μ_2(x) × [pattern(x,w)]
+  Schema evidence: WITH_LOGIN (Purchase -> Login, OUTGOING): listed signature compatible; FOR_SHOP (Login -> Shop, OUTGOING): listed signature compatible
+  Row binding slots: ah, ba, fi, @rel, @rel@1, p, l, s, @rel@2, @rel@3
+S4 ← S3 | clause 2 | WHERE
+  Keep rows only if ((s.business = 'deliver wireless niches' AND l.firstName = ah.firstName) AND l.lastName = ah.lastName) is TRUE (FALSE and NULL are removed).
+  μ_4(x) = μ_3(x) × [((s.business = 'deliver wireless niches' AND l.firstName = ah.firstName) AND l.lastName = ah.lastName) is TRUE]
+  Schema evidence: s.business: listed on Shop (STRING); l.firstName: listed on Login (STRING); ah.firstName: listed on AccountHolder (STRING); l.lastName: listed on Login (STRING); ah.lastName: listed on AccountHolder (STRING)
+  Row binding slots: ah, ba, fi, @rel, @rel@1, p, l, s, @rel@2, @rel@3
+  Variables visible after clause: ah, ba, fi, p, l, s
+S5 ← S4 | clause 3 | PROJECT
+  Output @computed:4:0 = ah.fullName. Equal projected rows retain summed multiplicities. Collapsed row slots: ah, ba, fi, @rel, @rel@1, p, l, s, @rel@2, @rel@3.
+  μ_5(y) = Σ_{x: project(x)=y} μ_4(x)
+  Schema evidence: ah.fullName: listed on AccountHolder (STRING)
+  Row binding slots: @computed:4:0
+S6 ← S5 | clause 3 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_6(y) = 1 if μ_5(y) > 0, otherwise 0
+  Row binding slots: @computed:4:0
+  Variables visible after clause: (none)
+  Names leaving scope: ah, ba, fi, p, l, s
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,1 @@
+MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'net' RETURN avg(ba.balance) AS averageBalance

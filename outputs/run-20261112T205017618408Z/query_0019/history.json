@@ -1,0 +1,20 @@
+{
+  "final_query": "MATCH (ba:BankAccount)\nWITH avg(ba.balance) AS avgAccountBalance\nOPTIONAL MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan)\nRETURN avgAccountBalance, avg(ul.loanAmount) AS avgUnsecuredLoanAmount",
+  "selected_trial": 1,
+  "status": "compilation_failed",
+  "stop_reason": "revision_failed",
+  "attempts": [
+    {
+      "number": 1,
+      "query": "MATCH (ba:BankAccount)\nWITH avg(ba.balance) AS avgAccountBalance\nOPTIONAL MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan)\nRETURN avgAccountBalance, avg(ul.loanAmount) AS avgUnsecuredLoanAmount",
+      "status": "compilation_failed",
+      "report": "Compilation: compilation_failed; mathematical interpretation: partial.\nSchema: observed (observations are not uniqueness or existence guarantees).\nS0: one empty binding with multiplicity 1; graph records are not accessed.\nS1 ← S0 | clause 1 | MATCH\n  For each incoming row, enumerate compatible assignments to (ba:BankAccount). Every matching relationship identity is a separate witness; rows may multiply. New row slots: ba.\n  μ_1(x,w) = μ_0(x) × [pattern(x,w)]\n  Row binding slots: ba\n  Variables visible after clause: ba\nS2 ← S1 | clause 2 | AGGREGATE\n  Form one global group, including an empty-input group; compute AVG(ba.balance); output avgAccountBalance. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: ba.\n  AVG(ba.balance) = Σ μ_1(x)·ba.balance(x) / Σ μ_1(x), over non-NULL ba.balance; NULL if denominator is 0\n  Schema evidence: ba.balance: listed on BankAccount (FLOAT)\n  Row binding slots: avgAccountBalance\n  Variables visible after clause: avgAccountBalance\n  Names leaving scope: ba\nCompilation stopped: Clause 3 (Match): OPTIONAL MATCH is not supported yet: 'Match'\nUnsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.\nInterpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.",
+      "model_report": "Compilation: compilation_failed; mathematical interpretation: partial.\nSchema: observed (observations are not uniqueness or existence guarantees).\nS0: one empty binding with multiplicity 1; graph records are not accessed.\nS1 ← S0 | clause 1 | MATCH\n  For each incoming row, enumerate compatible assignments to (ba:BankAccount). Every matching relationship identity is a separate witness; rows may multiply. New row slots: ba.\n  μ_1(x,w) = μ_0(x) × [pattern(x,w)]\n  Row binding slots: ba\n  Variables visible after clause: ba\nS2 ← S1 | clause 2 | AGGREGATE\n  Form one global group, including an empty-input group; compute AVG(ba.balance); output avgAccountBalance. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: ba.\n  AVG(ba.balance) = Σ μ_1(x)·ba.balance(x) / Σ μ_1(x), over non-NULL ba.balance; NULL if denominator is 0\n  Schema evidence: ba.balance: listed on BankAccount (FLOAT)\n  Row binding slots: avgAccountBalance\n  Variables visible after clause: avgAccountBalance\n  Names leaving scope: ba\nCompilation stopped: Clause 3 (Match): OPTIONAL MATCH is not supported yet: 'Match'\nUnsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.\nInterpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.",
+      "symbolic_status": "partial",
+      "revision_error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)"
+    }
+  ],
+  "input_index": 19,
+  "source_index": 19,
+  "question": "What is the average balance across all BankAccounts, and what is the average loan amount for all UnsecuredLoans associated with AccountHolders?"
+}

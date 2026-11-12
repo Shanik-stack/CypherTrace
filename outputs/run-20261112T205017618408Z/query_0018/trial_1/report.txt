@@ -1,0 +1,21 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:FROM_IP]->(ip), (ip)-[:LOCATED_IN]->(s); constraints: p:Purchase AND ip:IP AND s:State. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, ip, s, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: FROM_IP (Purchase -> IP, OUTGOING): listed signature compatible; LOCATED_IN (IP -> State, OUTGOING): listed signature compatible
+  Row binding slots: p, ip, s, @rel, @rel@1
+  Variables visible after clause: p, ip, s
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by s.name; compute AVG(p.amount), COUNT(p); output state, averagePurchaseAmount, purchaseCount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: p, ip, s, @rel, @rel@1.
+  AVG(p.amount) = Σ μ_1(x)·p.amount(x) / Σ μ_1(x), over non-NULL p.amount; NULL if denominator is 0; COUNT(p) = Σ μ_1(x) × [p is not NULL]
+  Schema evidence: s.name: listed on State (STRING); p.amount: listed on Purchase (FLOAT)
+  Row binding slots: state, averagePurchaseAmount, purchaseCount
+S3 ← S2 | clause 2 | ORDER
+  Order by $computed:1:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_3 = μ_2 (ordering metadata changes)
+  Row binding slots: @computed:1:0, @computed:1:1, @computed:1:2
+  Variables visible after clause: state, averagePurchaseAmount, purchaseCount
+  Names leaving scope: p, ip, s
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,6 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+Compilation stopped: Clause 1 (Match): Variable-length/weighted relationship is not supported yet: 'min_hops'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

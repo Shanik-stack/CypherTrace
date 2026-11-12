@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 96,
+  "source_index": 96,
+  "question": "For each type of place, determine the average visit duration (in seconds) and the percentage of visits made by persons confirmed to be sick after the visit started. Return the place type, average duration, and percentage of visits made by persons confirmed sick after the visit."
+}

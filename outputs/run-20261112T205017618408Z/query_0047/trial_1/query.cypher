@@ -1,0 +1,1 @@
+MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.startDate > 19891020 AND l.startDate < 19891025 AND l.lastName = 'Centanni' RETURN DISTINCT s.name

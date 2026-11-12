@@ -1,0 +1,26 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:WITH_CARD]->(c); constraints: p:Purchase AND c:BankCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, c, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: WITH_CARD (Purchase -> BankCard, OUTGOING): listed signature compatible
+  Row binding slots: p, c, @rel
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if c.limit > 5000 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [c.limit > 5000 is TRUE]
+  Schema evidence: c.limit: listed on BankCard (FLOAT)
+  Row binding slots: p, c, @rel
+  Variables visible after clause: p, c
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by c.expirationDate; compute AVG(p.amount); output expirationDate, averageAmount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: p, c, @rel.
+  AVG(p.amount) = Σ μ_2(x)·p.amount(x) / Σ μ_2(x), over non-NULL p.amount; NULL if denominator is 0
+  Schema evidence: c.expirationDate: listed on BankCard (STRING); p.amount: listed on Purchase (FLOAT)
+  Row binding slots: expirationDate, averageAmount
+S4 ← S3 | clause 2 | ORDER
+  Order by $computed:2:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_4 = μ_3 (ordering metadata changes)
+  Row binding slots: @computed:2:0, @computed:2:1
+  Variables visible after clause: expirationDate, averageAmount
+  Names leaving scope: p, c
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

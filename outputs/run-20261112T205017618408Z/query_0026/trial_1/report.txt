@@ -1,0 +1,17 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (t)-[:WITH]->(p); constraints: t:MoneyTransfer AND p:PhoneNumber AND p.provider = 'B Tee'. Every matching relationship identity is a separate witness; rows may multiply. New row slots: t, p, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: WITH (MoneyTransfer -> PhoneNumber, OUTGOING): listed signature compatible; p.provider: listed on PhoneNumber (STRING)
+  Row binding slots: t, p, @rel
+  Variables visible after clause: t, p
+S2 ← S1 | clause 2 | AGGREGATE
+  Form one global group, including an empty-input group; compute AVG(t.amount); output averageAmount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: t, p, @rel.
+  AVG(t.amount) = Σ μ_1(x)·t.amount(x) / Σ μ_1(x), over non-NULL t.amount; NULL if denominator is 0
+  Schema evidence: t.amount: listed on MoneyTransfer (FLOAT)
+  Row binding slots: averageAmount
+  Variables visible after clause: averageAmount
+  Names leaving scope: t, p
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

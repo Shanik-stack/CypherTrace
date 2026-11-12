@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 63,
+  "source_index": 63,
+  "question": "For each country, compute the average visit duration (in seconds) for visits to 'Hospital' places and the average visit duration for visits to 'Park' places. Return the country name, average hospital visit duration, and average park visit duration."
+}

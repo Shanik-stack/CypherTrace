@@ -1,0 +1,26 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:FROM_IP]->(ip), (ip)-[:LOCATED_IN]->(s); constraints: p:Purchase AND ip:IP AND s:State. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, ip, s, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: FROM_IP (Purchase -> IP, OUTGOING): listed signature compatible; LOCATED_IN (IP -> State, OUTGOING): listed signature compatible
+  Row binding slots: p, ip, s, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if p.amount > 4000 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [p.amount > 4000 is TRUE]
+  Schema evidence: p.amount: listed on Purchase (FLOAT)
+  Row binding slots: p, ip, s, @rel, @rel@1
+  Variables visible after clause: p, ip, s
+S3 ← S2 | clause 2 | PROJECT
+  Output stateName = s.name. Equal projected rows retain summed multiplicities. Collapsed row slots: p, ip, s, @rel, @rel@1.
+  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)
+  Schema evidence: s.name: listed on State (STRING)
+  Row binding slots: stateName
+S4 ← S3 | clause 2 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_4(y) = 1 if μ_3(y) > 0, otherwise 0
+  Row binding slots: @computed:2:0
+  Variables visible after clause: stateName
+  Names leaving scope: p, ip, s
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

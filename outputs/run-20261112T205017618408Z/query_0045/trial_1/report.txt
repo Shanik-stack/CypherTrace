@@ -1,0 +1,36 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (fi)<-[:FROM]-(ba), (ba)-[:SEND]->(mt); constraints: fi:FinancialInstitute AND ba:BankAccount AND mt:MoneyTransfer. Every matching relationship identity is a separate witness; rows may multiply. New row slots: fi, ba, mt, @rel, @rel@1.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: FROM (FinancialInstitute -> BankAccount, INCOMING): listed signature compatible; SEND (BankAccount -> MoneyTransfer, OUTGOING): listed signature compatible
+  Row binding slots: fi, ba, mt, @rel, @rel@1
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if mt.amount > 850 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [mt.amount > 850 is TRUE]
+  Schema evidence: mt.amount: listed on MoneyTransfer (FLOAT)
+  Row binding slots: fi, ba, mt, @rel, @rel@1
+  Variables visible after clause: fi, ba, mt
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by fi; compute COUNT(DISTINCT ba); output fi, accountCount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: ba, mt, @rel, @rel@1.
+  COUNT(DISTINCT ba): deduplicate non-NULL argument values within each group
+  Row binding slots: fi, accountCount
+S4 ← S3 | clause 2 | WHERE
+  Keep rows only if $computed:2:1 >= 2 is TRUE (FALSE and NULL are removed).
+  μ_4(x) = μ_3(x) × [$computed:2:1 >= 2 is TRUE]
+  Row binding slots: fi, @computed:2:1
+  Variables visible after clause: fi, accountCount
+  Names leaving scope: ba, mt
+S5 ← S4 | clause 3 | PROJECT
+  Output @computed:4:0 = fi.name. Equal projected rows retain summed multiplicities. Collapsed row slots: fi, @computed:2:1.
+  μ_5(y) = Σ_{x: project(x)=y} μ_4(x)
+  Schema evidence: fi.name: listed on FinancialInstitute (STRING)
+  Row binding slots: @computed:4:0
+S6 ← S5 | clause 3 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_6(y) = 1 if μ_5(y) > 0, otherwise 0
+  Row binding slots: @computed:4:0
+  Variables visible after clause: (none)
+  Names leaving scope: fi, accountCount
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

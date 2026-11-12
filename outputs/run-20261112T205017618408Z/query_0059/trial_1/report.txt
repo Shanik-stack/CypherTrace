@@ -1,0 +1,32 @@
+Compilation: compiled; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (p)-[:PERFORMS_VISIT]->(v), (v)-[:LOCATED_AT]->(@node), (@node)-[:PART_OF]->(@node@1), (@node@1)-[:PART_OF]->(@node@2), (@node@2)-[:PART_OF]->(c); constraints: p:Person AND v:Visit AND @node:Place AND @node@1:Region AND @node@2:Country AND c:Continent. Every matching relationship identity is a separate witness; rows may multiply. New row slots: p, v, @node, @node@1, @node@2, c, @rel, @rel@1, @rel@2, @rel@3, @rel@4.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Person -> Visit, OUTGOING): listed signature compatible; LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible; PART_OF (Region -> Country, OUTGOING): listed signature compatible; PART_OF (Country -> Continent, OUTGOING): listed signature compatible
+  Row binding slots: p, v, @node, @node@1, @node@2, c, @rel, @rel@1, @rel@2, @rel@3, @rel@4
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if v.duration > 3600 is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [v.duration > 3600 is TRUE]
+  Schema evidence: v.duration: listed on Visit (DURATION)
+  Row binding slots: p, v, @node, @node@1, @node@2, c, @rel, @rel@1, @rel@2, @rel@3, @rel@4
+  Variables visible after clause: p, v, c
+S3 ← S2 | clause 2 | AGGREGATE
+  Form group by c.name; compute COUNT(v), COUNT(DISTINCT p), AVG(v.duration); output continent, totalVisits, persons, avgVisitDuration. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: p, v, @node, @node@1, @node@2, c, @rel, @rel@1, @rel@2, @rel@3, @rel@4.
+  COUNT(v) = Σ μ_2(x) × [v is not NULL]; COUNT(DISTINCT p): deduplicate non-NULL argument values within each group; AVG(v.duration) = Σ μ_2(x)·v.duration(x) / Σ μ_2(x), over non-NULL v.duration; NULL if denominator is 0
+  Schema evidence: c.name: listed on Continent (STRING); v.duration: listed on Visit (DURATION)
+  Row binding slots: continent, totalVisits, persons, avgVisitDuration
+  Variables visible after clause: continent, totalVisits, persons, avgVisitDuration
+  Names leaving scope: p, v, c
+S4 ← S3 | clause 3 | PROJECT
+  Output continent = $computed:2:0, avgVisitsPerPerson = (toFloat($computed:2:1) / $computed:2:2), avgVisitDuration = $computed:2:3. Equal projected rows retain summed multiplicities.
+  μ_4(y) = Σ_{x: project(x)=y} μ_3(x)
+  Mathematics incomplete: Function toFloat() has no registered semantic contract
+S5 ← S4 | clause 3 | ORDER
+  Order by $computed:2:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_5 = μ_4 (ordering metadata changes)
+  Variables visible after clause: continent, avgVisitsPerPerson, avgVisitDuration
+  Names leaving scope: totalVisits, persons
+  Mathematics incomplete: Function toFloat() has no registered semantic contract
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

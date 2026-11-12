@@ -1,0 +1,27 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_CREDITCARD]->(c); constraints: a:AccountHolder AND c:CreditCard. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, c, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible
+  Row binding slots: a, c, @rel
+  Variables visible after clause: a, c
+S2 ← S1 | clause 2 | PROJECT
+  Output c = c. Equal projected rows retain summed multiplicities. Collapsed row slots: a, @rel.
+  μ_2(y) = Σ_{x: project(x)=y} μ_1(x)
+  Row binding slots: c
+S3 ← S2 | clause 2 | DISTINCT
+  Keep one occurrence of each distinct output tuple (values or entity identities).
+  μ_3(y) = 1 if μ_2(y) > 0, otherwise 0
+  Row binding slots: c
+  Variables visible after clause: c
+  Names leaving scope: a
+S4 ← S3 | clause 3 | AGGREGATE
+  Form one global group, including an empty-input group; compute AVG(c.balance), COUNT(c); output averageBalance, totalCreditCards. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: c.
+  AVG(c.balance) = Σ μ_3(x)·c.balance(x) / Σ μ_3(x), over non-NULL c.balance; NULL if denominator is 0; COUNT(c) = Σ μ_3(x) × [c is not NULL]
+  Schema evidence: c.balance: listed on CreditCard (FLOAT)
+  Row binding slots: averageBalance, totalCreditCards
+  Variables visible after clause: averageBalance, totalCreditCards
+  Names leaving scope: c
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,17 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (f)-[:HAS_UNSECUREDLOAN]->(l); constraints: f:Flagged AND f.lastName = 'Pelyo' AND l:UnsecuredLoan. Every matching relationship identity is a separate witness; rows may multiply. New row slots: f, l, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_UNSECUREDLOAN (Flagged -> UnsecuredLoan, OUTGOING): listed signature compatible; f.lastName: listed on Flagged (STRING)
+  Row binding slots: f, l, @rel
+  Variables visible after clause: f, l
+S2 ← S1 | clause 2 | AGGREGATE
+  Form one global group, including an empty-input group; compute AVG(l.loanAmount); output averageLoanAmount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: f, l, @rel.
+  AVG(l.loanAmount) = Σ μ_1(x)·l.loanAmount(x) / Σ μ_1(x), over non-NULL l.loanAmount; NULL if denominator is 0
+  Schema evidence: l.loanAmount: listed on UnsecuredLoan (FLOAT)
+  Row binding slots: averageLoanAmount
+  Variables visible after clause: averageLoanAmount
+  Names leaving scope: f, l
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

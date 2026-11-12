@@ -1,0 +1,1 @@
+MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime > datetime('2020-04-20') AND pl.type = 'Restaurant' RETURN c.name AS country, avg(duration.inSeconds(v.duration).seconds) AS avg_visit_duration_seconds ORDER BY country

@@ -1,0 +1,33 @@
+Compilation: compiled; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (c)<-[:PART_OF]-(co), (co)<-[:PART_OF]-(r), (r)<-[:PART_OF]-(p), (p)<-[:VISITS]-(person); constraints: c:Continent AND co:Country AND r:Region AND p:Place AND person:Person. Every matching relationship identity is a separate witness; rows may multiply. New row slots: c, co, r, p, person, @rel, @rel@1, @rel@2, v.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PART_OF (Continent -> Country, INCOMING): listed signature compatible; PART_OF (Country -> Region, INCOMING): listed signature compatible; PART_OF (Region -> Place, INCOMING): listed signature compatible; VISITS (Place -> Person, INCOMING): listed signature compatible
+  Row binding slots: c, co, r, p, person, @rel, @rel@1, @rel@2, v
+  Variables visible after clause: c, co, r, p, person, v
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by c, person; compute COUNT(v), SUM(duration(v).seconds); output c, person, visitCount, personDurationSeconds. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities.
+  COUNT(v) = Σ μ_1(x) × [v is not NULL]; SUM(duration(v).seconds) = Σ μ_1(x)·duration(v).seconds(x), over non-NULL duration(v).seconds; NULL if none
+  Variables visible after clause: c, person, visitCount, personDurationSeconds
+  Names leaving scope: co, r, p, v
+  Mathematics incomplete: Function duration() has no registered semantic contract
+S3 ← S2 | clause 3 | AGGREGATE
+  Form group by c; compute AVG($computed:1:2), SUM($computed:1:3), SUM($computed:1:2); output c, avgVisitsPerPerson, avgVisitDurationSeconds. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities.
+  AVG($computed:1:2) = Σ μ_2(x)·$computed:1:2(x) / Σ μ_2(x), over non-NULL $computed:1:2; NULL if denominator is 0; SUM($computed:1:3) = Σ μ_2(x)·$computed:1:3(x), over non-NULL $computed:1:3; NULL if none; SUM($computed:1:2) = Σ μ_2(x)·$computed:1:2(x), over non-NULL $computed:1:2; NULL if none
+  Variables visible after clause: c, avgVisitsPerPerson, avgVisitDurationSeconds
+  Names leaving scope: person, visitCount, personDurationSeconds
+  Mathematics incomplete: Function duration() has no registered semantic contract
+S4 ← S3 | clause 4 | PROJECT
+  Output continent = c.name, avgVisitsPerPerson = $computed:2:1, avgVisitDurationSeconds = $computed:2:2. Equal projected rows retain summed multiplicities.
+  μ_4(y) = Σ_{x: project(x)=y} μ_3(x)
+  Schema evidence: c.name: listed on Continent (STRING)
+  Mathematics incomplete: Function duration() has no registered semantic contract
+S5 ← S4 | clause 4 | ORDER
+  Order by $computed:3:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_5 = μ_4 (ordering metadata changes)
+  Variables visible after clause: continent, avgVisitsPerPerson, avgVisitDurationSeconds
+  Names leaving scope: c
+  Mathematics incomplete: Function duration() has no registered semantic contract
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

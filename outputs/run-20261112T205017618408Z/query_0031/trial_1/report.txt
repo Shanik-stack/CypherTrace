@@ -1,0 +1,22 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_CREDITCARD]->(cc), (p)-[:WITH_LOGIN]->(l), (l)-[:FOR_SHOP]->(s); constraints: a:AccountHolder AND cc:CreditCard AND p:Purchase AND l:Login AND s:Shop. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, cc, p, l, s, @rel, @rel@1, @rel@2.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_CREDITCARD (AccountHolder -> CreditCard, OUTGOING): listed signature compatible; WITH_LOGIN (Purchase -> Login, OUTGOING): listed signature compatible; FOR_SHOP (Login -> Shop, OUTGOING): listed signature compatible
+  Row binding slots: a, cc, p, l, s, @rel, @rel@1, @rel@2
+S2 ← S1 | clause 1 | WHERE
+  Keep rows only if (((cc.latePayments > 0 AND s.business = 'expedite compelling paradigms') AND l.firstName = a.firstName) AND l.lastName = a.lastName) is TRUE (FALSE and NULL are removed).
+  μ_2(x) = μ_1(x) × [(((cc.latePayments > 0 AND s.business = 'expedite compelling paradigms') AND l.firstName = a.firstName) AND l.lastName = a.lastName) is TRUE]
+  Schema evidence: cc.latePayments: listed on CreditCard (FLOAT); s.business: listed on Shop (STRING); l.firstName: listed on Login (STRING); a.firstName: listed on AccountHolder (STRING); l.lastName: listed on Login (STRING); a.lastName: listed on AccountHolder (STRING)
+  Row binding slots: a, cc, p, l, s, @rel, @rel@1, @rel@2
+  Variables visible after clause: a, cc, p, l, s
+S3 ← S2 | clause 2 | PROJECT
+  Output accountHolderFullName = a.fullName, purchaseAmount = p.amount. Equal projected rows retain summed multiplicities. Collapsed row slots: a, cc, p, l, s, @rel, @rel@1, @rel@2.
+  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)
+  Schema evidence: a.fullName: listed on AccountHolder (STRING); p.amount: listed on Purchase (FLOAT)
+  Row binding slots: accountHolderFullName, purchaseAmount
+  Variables visible after clause: accountHolderFullName, purchaseAmount
+  Names leaving scope: a, cc, p, l, s
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

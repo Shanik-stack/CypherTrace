@@ -1,0 +1,23 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_UNSECUREDLOAN]->(u); constraints: a:AccountHolder AND u:UnsecuredLoan. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, u, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_UNSECUREDLOAN (AccountHolder -> UnsecuredLoan, OUTGOING): listed signature compatible
+  Row binding slots: a, u, @rel
+  Variables visible after clause: a, u
+S2 ← S1 | clause 2 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_ADDRESS]->(ad); constraints: ad:Address. Every matching relationship identity is a separate witness; rows may multiply. New row slots: ad, @rel@1.
+  μ_2(x,w) = μ_1(x) × [pattern(x,w)]
+  Schema evidence: HAS_ADDRESS (AccountHolder -> Address, OUTGOING): listed signature compatible
+  Row binding slots: a, u, @rel, ad, @rel@1
+  Variables visible after clause: a, u, ad
+S3 ← S2 | clause 3 | AGGREGATE
+  Form group by ad.city; compute AVG(u.balance); output city, averageBalance. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: a, u, @rel, ad, @rel@1.
+  AVG(u.balance) = Σ μ_2(x)·u.balance(x) / Σ μ_2(x), over non-NULL u.balance; NULL if denominator is 0
+  Schema evidence: ad.city: listed on Address (STRING); u.balance: listed on UnsecuredLoan (FLOAT)
+  Row binding slots: city, averageBalance
+  Variables visible after clause: city, averageBalance
+  Names leaving scope: a, u, ad
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

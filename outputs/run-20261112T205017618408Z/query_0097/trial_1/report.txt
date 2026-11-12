@@ -1,0 +1,17 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (person)-[:PERFORMS_VISIT]->(visit), (visit)-[:LOCATED_AT]->(place), (place)-[:PART_OF]->(region); constraints: person:Person AND person.healthstatus = 'Sick' AND visit:Visit AND place:Place AND region:Region. Every matching relationship identity is a separate witness; rows may multiply. New row slots: person, visit, place, region, @rel, @rel@1, @rel@2.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PERFORMS_VISIT (Person -> Visit, OUTGOING): listed signature compatible; LOCATED_AT (Visit -> Place, OUTGOING): listed signature compatible; PART_OF (Place -> Region, OUTGOING): listed signature compatible; person.healthstatus: listed on Person (STRING)
+  Row binding slots: person, visit, place, region, @rel, @rel@1, @rel@2
+  Variables visible after clause: person, visit, place, region
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by region.name; compute AVG(visit.duration.seconds), COUNT(DISTINCT place); output regionName, averageVisitDurationSeconds, totalDistinctPlacesVisited. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: person, visit, place, region, @rel, @rel@1, @rel@2.
+  AVG(visit.duration.seconds) = Σ μ_1(x)·visit.duration.seconds(x) / Σ μ_1(x), over non-NULL visit.duration.seconds; NULL if denominator is 0; COUNT(DISTINCT place): deduplicate non-NULL argument values within each group
+  Schema evidence: region.name: listed on Region (STRING); visit.duration: listed on Visit (DURATION)
+  Row binding slots: regionName, averageVisitDurationSeconds, totalDistinctPlacesVisited
+  Variables visible after clause: regionName, averageVisitDurationSeconds, totalDistinctPlacesVisited
+  Names leaving scope: person, visit, place, region
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

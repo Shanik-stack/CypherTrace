@@ -1,0 +1,18 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (c)<-[:PART_OF]-(co), (co)<-[:PART_OF]-(r), (r)<-[:PART_OF]-(pl), (pl)<-[:LOCATED_AT]-(v), (v)<-[:PERFORMS_VISIT]-(per); constraints: c:Continent AND co:Country AND r:Region AND pl:Place AND v:Visit AND per:Person. Every matching relationship identity is a separate witness; rows may multiply. New row slots: c, co, r, pl, v, per, @rel, @rel@1, @rel@2, @rel@3, @rel@4.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: PART_OF (Continent -> Country, INCOMING): listed signature compatible; PART_OF (Country -> Region, INCOMING): listed signature compatible; PART_OF (Region -> Place, INCOMING): listed signature compatible; LOCATED_AT (Place -> Visit, INCOMING): listed signature compatible; PERFORMS_VISIT (Visit -> Person, INCOMING): listed signature compatible
+  Row binding slots: c, co, r, pl, v, per, @rel, @rel@1, @rel@2, @rel@3, @rel@4
+  Variables visible after clause: c, co, r, pl, v, per
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by c; compute COUNT(DISTINCT v); output c, totalVisits. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: co, r, pl, v, per, @rel, @rel@1, @rel@2, @rel@3, @rel@4.
+  COUNT(DISTINCT v): deduplicate non-NULL argument values within each group
+  Row binding slots: c, totalVisits
+  Variables visible after clause: c, totalVisits
+  Names leaving scope: co, r, pl, v, per
+Compilation stopped: Clause 3 (Match): OPTIONAL MATCH is not supported yet: 'Match'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

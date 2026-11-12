@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 78,
+  "source_index": 78,
+  "question": "For each type of place, find the average visit duration in seconds and the number of people who visited that place type with a 'Sick' health status. Return the place type, average duration, and the count of sick visitors."
+}

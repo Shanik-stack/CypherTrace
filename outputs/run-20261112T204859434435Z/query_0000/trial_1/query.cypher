@@ -1,0 +1,1 @@
+MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Montana' RETURN avg(p.amount)

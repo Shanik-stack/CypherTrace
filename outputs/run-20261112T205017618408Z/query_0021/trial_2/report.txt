@@ -1,0 +1,17 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (a)-[:HAS_BANKACCOUNT]->(b); constraints: a:AccountHolder AND b:BankAccount. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, b, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: HAS_BANKACCOUNT (AccountHolder -> BankAccount, OUTGOING): listed signature compatible
+  Row binding slots: a, b, @rel
+  Variables visible after clause: a, b
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by a.UniqueId, a.fullName; compute AVG(b.balance), COUNT(DISTINCT b); output accountHolderUniqueId, accountHolderFullName, averageBankAccountBalance, totalBankAccounts. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: a, b, @rel.
+  AVG(b.balance) = Σ μ_1(x)·b.balance(x) / Σ μ_1(x), over non-NULL b.balance; NULL if denominator is 0; COUNT(DISTINCT b): deduplicate non-NULL argument values within each group
+  Schema evidence: a.UniqueId: listed on AccountHolder (STRING); a.fullName: listed on AccountHolder (STRING); b.balance: listed on BankAccount (FLOAT)
+  Row binding slots: accountHolderUniqueId, accountHolderFullName, averageBankAccountBalance, totalBankAccounts
+  Variables visible after clause: accountHolderUniqueId, accountHolderFullName, averageBankAccountBalance, totalBankAccounts
+  Names leaving scope: a, b
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

@@ -1,0 +1,23 @@
+{
+  "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName",
+  "selected_trial": 1,
+  "status": "compiled",
+  "stop_reason": "critic_accepted",
+  "attempts": [
+    {
+      "number": 1,
+      "query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName",
+      "status": "compiled",
+      "report": "Compilation: compiled; mathematical interpretation: supported.\nSchema: observed (observations are not uniqueness or existence guarantees).\nS0: one empty binding with multiplicity 1; graph records are not accessed.\nS1 ← S0 | clause 1 | MATCH\n  For each incoming row, enumerate compatible assignments to (a)-[:HAS_PHONENUMBER]->(p); constraints: a:AccountHolder AND p:PhoneNumber. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, p, @rel.\n  μ_1(x,w) = μ_0(x) × [pattern(x,w)]\n  Schema evidence: HAS_PHONENUMBER (AccountHolder -> PhoneNumber, OUTGOING): listed signature compatible\n  Row binding slots: a, p, @rel\nS2 ← S1 | clause 1 | WHERE\n  Keep rows only if (a.birthDate = '1956-06-21' AND p.provider = 'B Tee') is TRUE (FALSE and NULL are removed).\n  μ_2(x) = μ_1(x) × [(a.birthDate = '1956-06-21' AND p.provider = 'B Tee') is TRUE]\n  Schema evidence: a.birthDate: listed on AccountHolder (STRING); p.provider: listed on PhoneNumber (STRING)\n  Row binding slots: a, p, @rel\n  Variables visible after clause: a, p\nS3 ← S2 | clause 2 | PROJECT\n  Output @computed:2:0 = a.fullName. Equal projected rows retain summed multiplicities. Collapsed row slots: a, p, @rel.\n  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)\n  Schema evidence: a.fullName: listed on AccountHolder (STRING)\n  Row binding slots: @computed:2:0\n  Variables visible after clause: (none)\n  Names leaving scope: a, p\nInterpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.",
+      "model_report": "Compilation: compiled; mathematical interpretation: supported.\nSchema: observed (observations are not uniqueness or existence guarantees).\nS0: one empty binding with multiplicity 1; graph records are not accessed.\nS1 ← S0 | clause 1 | MATCH\n  For each incoming row, enumerate compatible assignments to (a)-[:HAS_PHONENUMBER]->(p); constraints: a:AccountHolder AND p:PhoneNumber. Every matching relationship identity is a separate witness; rows may multiply. New row slots: a, p, @rel.\n  μ_1(x,w) = μ_0(x) × [pattern(x,w)]\n  Schema evidence: HAS_PHONENUMBER (AccountHolder -> PhoneNumber, OUTGOING): listed signature compatible\n  Row binding slots: a, p, @rel\nS2 ← S1 | clause 1 | WHERE\n  Keep rows only if (a.birthDate = '1956-06-21' AND p.provider = 'B Tee') is TRUE (FALSE and NULL are removed).\n  μ_2(x) = μ_1(x) × [(a.birthDate = '1956-06-21' AND p.provider = 'B Tee') is TRUE]\n  Schema evidence: a.birthDate: listed on AccountHolder (STRING); p.provider: listed on PhoneNumber (STRING)\n  Row binding slots: a, p, @rel\n  Variables visible after clause: a, p\nS3 ← S2 | clause 2 | PROJECT\n  Output @computed:2:0 = a.fullName. Equal projected rows retain summed multiplicities. Collapsed row slots: a, p, @rel.\n  μ_3(y) = Σ_{x: project(x)=y} μ_2(x)\n  Schema evidence: a.fullName: listed on AccountHolder (STRING)\n  Row binding slots: @computed:2:0\n  Variables visible after clause: (none)\n  Names leaving scope: a, p\nInterpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.",
+      "symbolic_status": "supported",
+      "critique": {
+        "needs_revision": false,
+        "feedback": ""
+      }
+    }
+  ],
+  "input_index": 33,
+  "source_index": 33,
+  "question": "Find AccountHolders whose birth date is '1956-06-21' and have a PhoneNumber provided by 'B Tee'. Return the full name of those AccountHolders."
+}

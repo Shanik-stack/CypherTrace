@@ -1,0 +1,4 @@
+Cypher parsing failed:
+[CG1102] line 1:92 mismatched input '<-'; expected {MINUS}
+  MATCH (mt:MoneyTransfer)-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)-[:FROM]<-[:SEND]-(mt:MoneyTransfer)
+                                                                                             ^

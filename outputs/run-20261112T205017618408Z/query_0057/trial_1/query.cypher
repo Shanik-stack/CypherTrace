@@ -1,0 +1,1 @@
+MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.mail CONTAINS 'acme.com' WITH s, count(DISTINCT l) AS acmeLogins WHERE acmeLogins >= 2 RETURN s.name

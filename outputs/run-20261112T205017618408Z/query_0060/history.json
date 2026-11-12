@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 60,
+  "source_index": 60,
+  "question": "For each type of place, calculate the average duration (in seconds) of visits made by people with 'Healthy' status and the average duration of visits made by people with 'Sick' status. Return the place type, average healthy visit duration, and average sick visit duration."
+}

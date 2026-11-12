@@ -1,0 +1,1 @@
+MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName

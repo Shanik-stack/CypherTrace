@@ -1,0 +1,11 @@
+{
+  "final_query": null,
+  "selected_trial": null,
+  "status": "failed",
+  "stop_reason": "query_error",
+  "error": "ValueError: baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=5024, finish_reason=length)",
+  "attempts": [],
+  "input_index": 79,
+  "source_index": 79,
+  "question": "For each continent, calculate the average duration of visits in seconds and the number of distinct persons who performed visits in that continent. Return the continent name, average visit duration, and distinct person count."
+}

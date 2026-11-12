@@ -1,0 +1,12 @@
+Compilation: compilation_failed; mathematical interpretation: partial.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (person)-[:VISITS]->(p); constraints: person:Person AND p:Place. Every matching relationship identity is a separate witness; rows may multiply. New row slots: person, p, v.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: VISITS (Person -> Place, OUTGOING): listed signature compatible
+  Row binding slots: person, p, v
+  Variables visible after clause: person, p, v
+Compilation stopped: Clause 2 (Match): OPTIONAL MATCH is not supported yet: 'Match'
+Unsupported by this analyzer does not necessarily mean invalid Neo4j Cypher.
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.

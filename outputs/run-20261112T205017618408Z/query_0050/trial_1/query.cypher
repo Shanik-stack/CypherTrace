@@ -1,0 +1,1 @@
+MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:WITH_CARD]->(bc:BankCard) WHERE bc.limit = 5000.0 RETURN DISTINCT s.name AS name

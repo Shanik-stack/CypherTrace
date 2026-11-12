@@ -1,0 +1,11 @@
+[
+  {
+    "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Montana' RETURN avg(p.amount)",
+    "selected_trial": 1,
+    "status": "compiled",
+    "stop_reason": "critic_accepted",
+    "input_index": 0,
+    "source_index": 0,
+    "question": "What is the average purchase amount for purchases delivered to addresses in 'Montana'?"
+  }
+]

@@ -1,0 +1,1 @@
+MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop) WHERE cc.latePayments > 0 AND s.business = 'expedite compelling paradigms' AND l.firstName = a.firstName AND l.lastName = a.lastName RETURN a.fullName AS accountHolderFullName, p.amount AS purchaseAmount

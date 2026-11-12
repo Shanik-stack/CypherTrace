@@ -1,0 +1,1 @@
+MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Ohio' RETURN avg(p.amount) AS averageAmount, max(p.amount) AS maximumAmount

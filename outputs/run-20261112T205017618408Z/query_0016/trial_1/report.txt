@@ -1,0 +1,21 @@
+Compilation: compiled; mathematical interpretation: supported.
+Schema: observed (observations are not uniqueness or existence guarantees).
+S0: one empty binding with multiplicity 1; graph records are not accessed.
+S1 ← S0 | clause 1 | MATCH
+  For each incoming row, enumerate compatible assignments to (m)-[:WITH]->(p); constraints: m:MoneyTransfer AND p:PhoneNumber. Every matching relationship identity is a separate witness; rows may multiply. New row slots: m, p, @rel.
+  μ_1(x,w) = μ_0(x) × [pattern(x,w)]
+  Schema evidence: WITH (MoneyTransfer -> PhoneNumber, OUTGOING): listed signature compatible
+  Row binding slots: m, p, @rel
+  Variables visible after clause: m, p
+S2 ← S1 | clause 2 | AGGREGATE
+  Form group by p.provider; compute AVG(m.amount), COUNT(m); output provider, averageAmount, moneyTransferCount. Each surviving input occurrence contributes its multiplicity. COUNT(*) includes all rows; other aggregates ignore NULL arguments. DISTINCT aggregate arguments deduplicate values, not entity identities. Group aggregation consumes row slots: m, p, @rel.
+  AVG(m.amount) = Σ μ_1(x)·m.amount(x) / Σ μ_1(x), over non-NULL m.amount; NULL if denominator is 0; COUNT(m) = Σ μ_1(x) × [m is not NULL]
+  Schema evidence: p.provider: listed on PhoneNumber (STRING); m.amount: listed on MoneyTransfer (FLOAT)
+  Row binding slots: provider, averageAmount, moneyTransferCount
+S3 ← S2 | clause 2 | ORDER
+  Order by $computed:1:0 ASC; row counts are unchanged. Ties have unspecified order.
+  μ_3 = μ_2 (ordering metadata changes)
+  Row binding slots: @computed:1:0, @computed:1:1, @computed:1:2
+  Variables visible after clause: provider, averageAmount, moneyTransferCount
+  Names leaving scope: m, p
+Interpretation only: no intent correctness or concrete rows established. A possible multiplicity effect does not by itself establish an error.
