@@ -137,9 +137,13 @@ class AnalysisContext:
                         self._definitions[col.symbol] = (col.expression, e.clause)
             if isinstance(op, AggregateBag):
                 for key in op.grouping_keys:
-                    self._definitions[key.symbol] = (key.expression, e.clause)
+                    if key.symbol != getattr(key.expression, 'symbol', None):
+                        self._definitions[key.symbol] = (key.expression, e.clause)
                 for agg in op.aggregate_computations:
                     self._definitions[agg.symbol] = (agg.expression, e.clause)
+                for col in op.columns:
+                    if col.symbol != getattr(col.expression, 'symbol', None):
+                        self._definitions[col.symbol] = (col.expression, e.clause)
         # Snapshot requirements AFTER each clause. A label introduced in a
         # later MATCH must never appear in an earlier intermediate-state report.
         nodes: dict[Symbol, set[str]] = {}

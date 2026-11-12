@@ -1,0 +1,8 @@
+{
+  "records_file": "tests/fixtures/bank_account_trials.json",
+  "query_source": "reference",
+  "max_revisions": 0,
+  "improve_without_critic": false,
+  "show_formulas": false,
+  "max_report_chars": 8000
+}

@@ -7,7 +7,6 @@ cover only the registered fragment, rather than guessing unknown functions.
 
 
 from dataclasses import dataclass
-from typing import Callable
 import random
 
 from graph_query_analysis.expressions import (AggregateCall, Arithmetic, FunctionCall, ParameterReference,
@@ -134,12 +133,6 @@ def _infer_rand(args: tuple[CypherType, ...]) -> CypherType:
     return FLOAT
 
 
-@dataclass(frozen=True)
-class FunctionSpec:
-    infer: Callable[[tuple[CypherType, ...]], CypherType]
-    evaluate: Callable[[tuple[object, ...], random.Random], object]
-
-
 def _coalesce(values, _rng):
     return next((v for v in values if v is not None), None)
 
@@ -168,14 +161,14 @@ def _to_string(values, _rng):
     return str(values[0])
 
 
-FUNCTIONS: dict[str, FunctionSpec] = {
-    "coalesce": FunctionSpec(_infer_coalesce, _coalesce),
-    "head": FunctionSpec(_infer_head, _head),
-    "last": FunctionSpec(_infer_head, _last),
-    "size": FunctionSpec(_infer_size, _size),
-    "abs": FunctionSpec(_infer_abs, _abs),
-    "tostring": FunctionSpec(_infer_to_string, _to_string),
-    "rand": FunctionSpec(_infer_rand, lambda _values, rng: rng.random()),
+FUNCTIONS = {
+    "coalesce": (_infer_coalesce, _coalesce),
+    "head": (_infer_head, _head),
+    "last": (_infer_head, _last),
+    "size": (_infer_size, _size),
+    "abs": (_infer_abs, _abs),
+    "tostring": (_infer_to_string, _to_string),
+    "rand": (_infer_rand, lambda _values, rng: rng.random()),
 }
 
 
@@ -183,14 +176,27 @@ def function_type(name: str, args: tuple[CypherType, ...]) -> CypherType:
     spec = FUNCTIONS.get(name.lower())
     if spec is None:
         return UNKNOWN  # Keep unregistered/UDF calls representable, not verified.
-    return spec.infer(args)
+    return spec[0](args)
 
 
 def call_function(name: str, args: tuple[object, ...], rng: random.Random) -> object:
     spec = FUNCTIONS.get(name.lower())
     if spec is None:
         raise UnsupportedFunctionError(f"Function {name}() has no evaluator")
-    return spec.evaluate(args, rng)
+    _require_arity(name, args, 0 if name.lower() == 'rand' else 1,
+                   None if name.lower() == 'coalesce' else 0 if name.lower() == 'rand' else 1)
+    if args and args[0] is not None:
+        value = args[0]
+        valid = {
+            'head': isinstance(value, (list, tuple)),
+            'last': isinstance(value, (list, tuple)),
+            'size': isinstance(value, (list, tuple, str)),
+            'abs': type(value) in (int, float),
+            'tostring': type(value) in (str, bool, int, float),
+        }
+        if not valid.get(name.lower(), True):
+            raise CypherTypeError(f'Invalid {name}() input: {type(value).__name__}')
+    return spec[1](args, rng)
 
 
 def infer_type(expr: ValueExpression, state: SymbolicState,
@@ -221,7 +227,9 @@ def infer_type(expr: ValueExpression, state: SymbolicState,
         return UNKNOWN
     if isinstance(expr, PropertyAccess):
         owner = infer_type(expr.owner, state, computed)
-        if owner.name not in {"NODE", "RELATIONSHIP", "UNKNOWN"}:
+        if owner.name == 'NULL':
+            return NULL
+        if owner.name not in {"NODE", "RELATIONSHIP", "MAP", "UNKNOWN"}:
             raise CypherTypeError(f"Cannot access property {expr.property_name!r} on {owner}")
         if isinstance(expr.owner, SymbolReference):
             symbol = expr.owner.symbol
@@ -248,7 +256,7 @@ def infer_type(expr: ValueExpression, state: SymbolicState,
             raise CypherTypeError(f"Arithmetic {expr.operator} cannot combine {left} and {right}")
         if "UNKNOWN" in {left.name, right.name}: return UNKNOWN
         if "NULL" in {left.name, right.name}: return NULL
-        name = "FLOAT" if expr.operator == "/" or "FLOAT" in {left.name, right.name} else (
+        name = "FLOAT" if "FLOAT" in {left.name, right.name} else (
             "NUMBER" if "NUMBER" in {left.name, right.name} else "INTEGER")
         return CypherType(name, nullable=left.nullable or right.nullable)
     if isinstance(expr, FunctionCall):

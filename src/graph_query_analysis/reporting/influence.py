@@ -13,7 +13,7 @@ from graph_query_analysis.expressions import (AggregateBag, DistinctBag, ExtendB
                            MatchBag, ProjectBag, SliceBag)
 from graph_query_analysis.model import Symbol
 
-EffectMode = Literal['occurrences', 'distinct_keys', 'eligibility', 'unknown']
+EffectMode = Literal['occurrences', 'distinct_keys', 'group_keys', 'eligibility', 'endpoint', 'unknown']
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,7 @@ class InfluenceSnapshot:
     # Influences stored inside values computed by earlier aggregations. They
     # must not be mistaken for current-row duplicate contributions.
     value_sources: tuple[tuple[Symbol, tuple[Symbol, ...]], ...] = ()
+    reduction: tuple[int, str] | None = None
 
     def mode(self, symbol: Symbol) -> EffectMode | None:
         return dict(self.modes).get(symbol)
@@ -60,6 +61,7 @@ class InfluenceTimeline:
         rows: dict[Symbol, tuple[Symbol, ...]] = {}
         selections: list[int] = []
         carried_values: dict[Symbol, tuple[Symbol, ...]] = {}
+        reduction = None
         from graph_query_analysis.reporting.core import referenced_symbols
 
         def previous_value_sources(expr):
@@ -69,7 +71,7 @@ class InfluenceTimeline:
         def snapshot() -> InfluenceSnapshot:
             return InfluenceSnapshot(tuple(modes.items()), tuple(rows.items()),
                                      tuple(dict.fromkeys(selections)),
-                                     tuple(carried_values.items()))
+                                     tuple(carried_values.items()), reduction)
 
         for event in ctx.events:
             op = event.operator
@@ -88,8 +90,8 @@ class InfluenceTimeline:
                 # constrains it to that edge's endpoint. Its prior existence
                 # constraints still affect eligibility.
                 for endpoint in related_nodes:
-                    if endpoint in modes and modes[endpoint] != 'unknown':
-                        modes[endpoint] = 'eligibility'
+                    if modes.get(endpoint) == 'occurrences':
+                        modes[endpoint] = 'endpoint'
                 for slot in dict.fromkeys(pattern_slots):
                     if slot not in rows:
                         rows[slot] = (slot,)
@@ -112,8 +114,10 @@ class InfluenceTimeline:
                 rows = {col.symbol: ctx.resolve(col.expression) for col in op.columns}
                 carried_values = updated
             elif isinstance(op, DistinctBag):
+                reduction = (event.clause, 'DISTINCT')
                 key_dependencies = set().union(*map(set, rows.values())) if rows else set()
-                for witness in modes:
+                witnesses = dict.fromkeys((*modes, *(s for sources in rows.values() for s in sources)))
+                for witness in witnesses:
                     # A retained node/edge value or property-derived key can
                     # vary with the witness even after DISTINCT removes copies.
                     modes[witness] = ('distinct_keys' if witness in key_dependencies
@@ -133,8 +137,12 @@ class InfluenceTimeline:
                 updated = {col.symbol: tuple(dict.fromkeys(
                     w for sym in referenced_symbols(col.expression)
                     for w in all_values.get(sym, ()))) for col in op.columns}
-                for witness in modes:
-                    modes[witness] = 'eligibility'
+                key_dependencies = tuple(dict.fromkeys(s for key in op.grouping_keys for s in ctx.resolve(key.expression)))
+                # Global aggregation always emits one row, even on empty input.
+                # Earlier witnesses can affect its values, not its existence.
+                modes = {w: 'group_keys' if w in key_dependencies else 'eligibility'
+                         for w in dict.fromkeys((*modes, *key_dependencies))} if op.grouping_keys else {}
+                reduction = (event.clause, 'grouping')
                 rows = {col.symbol: ctx.resolve(col.expression) for col in op.columns}
                 carried_values = updated
             elif isinstance(op, FilterBag):

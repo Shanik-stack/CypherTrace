@@ -1,0 +1,17 @@
+{
+  "dataset_name": "mtq",
+  "split": "train",
+  "limit": 1,
+  "validation_type": "manual",
+  "query_source": "agent",
+  "max_revisions": 2,
+  "improve_without_critic": false,
+  "show_formulas": false,
+  "max_report_chars": 8000,
+  "agent": {
+    "service": "open_router",
+    "model": null,
+    "max_output_tokens": 4096,
+    "reasoning_effort": "minimal"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "records_file": "tests/fixtures/bank_account_trials.json",
+  "query_source": "reference",
+  "max_revisions": 2,
+  "improve_without_critic": true,
+  "show_formulas": false,
+  "max_report_chars": 8000,
+  "llm": {
+    "service": "open_router",
+    "model": null,
+    "max_output_tokens": 4096,
+    "reasoning_effort": null
+  }
+}

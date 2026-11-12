@@ -1,0 +1,18 @@
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "LEAN-Cypher"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["cypherast==0.1.12", "networkx>=3.4,<4"]
+
+[project.optional-dependencies]
+llm = ["openai>=2,<4", "python-dotenv>=1,<2"]
+datasets = ["datasets>=3,<6", "huggingface-hub>=0.26,<2"]
+neo4j = ["neo4j>=6,<7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

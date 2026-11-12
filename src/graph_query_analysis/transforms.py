@@ -221,6 +221,10 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
         return _check_value(Arithmetic(_ARITHMETIC[kind],
                           _value(args.get("this"), state, aggregate=aggregate, variables=variables),
                           _value(args.get("expression"), state, aggregate=aggregate, variables=variables)), state)
+    if kind == 'Coalesce':
+        return _check_value(FunctionCall('coalesce', tuple(
+            _value(a, state, aggregate=aggregate, variables=variables)
+            for a in args['expressions'])), state)
     if kind == "FunctionCall":
         name = args.get("name")
         _require(isinstance(name, str) and bool(name), "FunctionCall requires a name")
@@ -230,9 +234,7 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
         if name_lower in _AGGREGATES:
             if not aggregate:
                 raise UnsupportedCypherError("Nested/inline aggregates are not supported")
-            if len(raw_arguments) == 0 and name_lower == "count":
-                arg = None
-            elif len(raw_arguments) == 1 and _node(raw_arguments[0], "aggregate argument")[0] == "Star":
+            if len(raw_arguments) == 1 and _node(raw_arguments[0], "aggregate argument")[0] == "Star":
                 _require(name_lower == "count", "Only count(*) accepts a star")
                 arg = None
             elif len(raw_arguments) == 1:
@@ -244,6 +246,7 @@ def _value(ast: Any, state: SymbolicState, *, aggregate: bool = False,
             distinct = args.get("distinct")
             _require(distinct is None or isinstance(distinct, bool),
                      "Aggregate DISTINCT must be boolean or null")
+            _require(not (distinct and arg is None), 'COUNT(DISTINCT *) is not valid Cypher')
             return AggregateCall(name_lower, arg, distinct=bool(distinct))
         if args.get("distinct") not in (None, False):
             _unsupported("DISTINCT on scalar function", name)
@@ -558,7 +561,7 @@ def _aggregate_bag(source, state: SymbolicState, columns: tuple[Projection, ...]
     return AggregateBag(source, keys, tuple(aggregations), resolved)
 
 
-def _sort_spec(order_ast: Any, state: SymbolicState) -> tuple[SortKey, ...]:
+def _sort_spec(order_ast: Any, state: SymbolicState, *, projected=None, columns=()) -> tuple[SortKey, ...]:
     """Accept the conventional serialized Order/Ordered nodes, reject unknowns."""
     kind, args = _node(order_ast, "ORDER BY")
     if kind not in ("Order", "OrderBy"):
@@ -575,11 +578,18 @@ def _sort_spec(order_ast: Any, state: SymbolicState) -> tuple[SortKey, ...]:
                 raise UnsupportedCypherError("Explicit NULLS FIRST/LAST not implemented")
             expr_ast = item_args.get("this")
             raw_desc = item_args.get("descending", item_args.get("desc", False))
-            _require(isinstance(raw_desc, bool), "Sort direction must be boolean")
-            descending = raw_desc
+            _require(raw_desc is None or isinstance(raw_desc, bool), "Sort direction must be boolean")
+            descending = bool(raw_desc)
         else:
             expr_ast, descending = item, False
-        result.append(SortKey(_value(expr_ast, state), descending))
+        expression = _value(expr_ast, state, aggregate=projected is not None)
+        if projected is not None:
+            # ORDER BY may repeat an exported grouping/aggregate expression
+            # rather than use its alias. Read its already-computed output slot.
+            column = next((c for c in columns if c.expression == expression), None)
+            expression = (SymbolReference(column.symbol) if column is not None
+                          else _value(expr_ast, projected))
+        result.append(SortKey(expression, descending))
     return tuple(result)
 
 
@@ -628,50 +638,47 @@ def _project_clause(state: SymbolicState, clause: dict[str, Any], *, with_clause
     hidden_in_where = where is not None and bool(_names_referenced(where) - exported)
     hidden_in_order = order is not None and bool(_names_referenced(order) - exported)
     projected_state = replace(state, scope=bindings)
+    modifier_state = projected_state
+    extended = False
 
     if grouped:
-        if hidden_in_where or hidden_in_order:
+        if hidden_in_where:
             raise UnsupportedCypherError("Grouped queries cannot reference discarded input variables")
         bag = _aggregate_bag(state.bag, state, columns, group_by)
-        if distinct:
-            bag = DistinctBag(bag)
-        if where is not None:
-            bag = FilterBag(bag, _predicate(where, projected_state))
-        if order is not None:
-            bag = SortBag(bag, _sort_spec(order, projected_state))
     elif hidden_in_where or hidden_in_order:
         if distinct:
             raise UnsupportedCypherError(
                 "WITH DISTINCT cannot reference discarded variables in WHERE/ORDER BY"
             )
-        # Compute aliases once, retaining non-exported input symbols until the
-        # WHERE and any hidden-variable ORDER BY have been evaluated.
+        # Compute aliases once and retain hidden variables through all modifiers.
         bag = ExtendBag(state.bag, columns)
         combined = _scope(state)
         combined.update(_scope(projected_state))
-        extended_state = replace(state, scope=tuple(combined.values()))
-        if where is not None:
-            bag = FilterBag(bag, _predicate(where, extended_state))
-        if hidden_in_order:
-            bag = SortBag(bag, _sort_spec(order, extended_state))
-        copied = tuple(Projection(c.alias, SymbolReference(c.symbol), c.symbol, c.value_type)
-                       for c in columns)
-        bag = ProjectBag(bag, copied)
-        if order is not None and not hidden_in_order:
-            bag = SortBag(bag, _sort_spec(order, projected_state))
+        modifier_state = replace(state, scope=tuple(combined.values()))
+        extended = True
     else:
         bag = ProjectBag(state.bag, columns)
     if distinct:
         bag = DistinctBag(bag)
-        if where is not None:
-            bag = FilterBag(bag, _predicate(where, projected_state))
-        if order is not None:
-            bag = SortBag(bag, _sort_spec(order, projected_state))
+    if order is not None:
+        if grouped:
+            combined = {**_scope(state), **_scope(projected_state)}
+            order_state = replace(state, scope=tuple(combined.values()))
+            keys = _sort_spec(order, order_state, projected=projected_state, columns=columns)
+        else:
+            keys = _sort_spec(order, modifier_state)
+        bag = SortBag(bag, keys)
 
     if args.get("skip") is not None or args.get("limit") is not None:
         bag = SliceBag(bag,
                        _page_value(args.get("skip"), projected_state, "SKIP"),
                        _page_value(args.get("limit"), projected_state, "LIMIT"))
+    if where is not None:
+        bag = FilterBag(bag, _predicate(where, modifier_state))
+    if extended:
+        copied = tuple(Projection(c.alias, SymbolReference(c.symbol), c.symbol, c.value_type)
+                       for c in columns)
+        bag = ProjectBag(bag, copied)
     return replace(state, bag=bag, scope=bindings, graph=state.graph.advance())
 
 

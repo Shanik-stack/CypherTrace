@@ -1,0 +1,10 @@
+.git
+.env
+venv
+lean
+outputs
+reports
+graph_analysis_requests
+.review_backups
+__pycache__
+*.pyc

@@ -1,6 +1,3 @@
-"""Evaluates on actual sample graph with our logic..... very weird, i should remove this file, but im keeping it incase we need to test on sample neo4j graphs in the future, by which time this file will need to be fully re-implemented"""
-
-
 """Finite-graph interpreter for the supported read-only Cypher 25 bag fragment.
 
 This evaluates the *same* expression tree produced by transforms.py. Each row
@@ -15,6 +12,7 @@ from dataclasses import dataclass, field
 from functools import cmp_to_key
 from typing import Mapping
 import random
+import math
 
 from graph_query_analysis.expressions import (
     AggregateBag, AggregateCall, AllOf, AnyOf, Arithmetic, Comparison, DistinctBag,
@@ -155,16 +153,25 @@ def _freeze(value: object) -> object:
     return (type(value).__name__, value)
 
 
-def _truth_and(values: list[bool | None]) -> bool | None:
-    if False in values:
+def _equal(left, right):
+    """Predicate equality is nullable, unlike the total equality used by bags."""
+    if left is None or right is None:
+        return None
+    if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
+        if len(left) != len(right):
+            return False
+        comparisons = [_equal(a, b) for a, b in zip(left, right)]
+    elif isinstance(left, dict) and isinstance(right, dict):
+        if left.keys() != right.keys():
+            return False
+        comparisons = [_equal(left[k], right[k]) for k in left]
+    else:
+        if any(isinstance(v, float) and math.isnan(v) for v in (left, right)):
+            return False
+        return _freeze(left) == _freeze(right)
+    if False in comparisons:
         return False
-    return None if None in values else True
-
-
-def _truth_or(values: list[bool | None]) -> bool | None:
-    if True in values:
-        return True
-    return None if None in values else False
+    return None if None in comparisons else True
 
 
 class BagEvaluator:
@@ -207,12 +214,20 @@ class BagEvaluator:
                 return None
             if isinstance(a, bool) or isinstance(b, bool):
                 raise EvaluationError("Boolean operands are not numeric")
+            if expression.operator == '+' and isinstance(a, str) and isinstance(b, str):
+                return a + b
+            if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+                raise EvaluationError('Numeric arithmetic requires numbers')
             try:
                 if expression.operator == "+": return a + b
                 if expression.operator == "-": return a - b
                 if expression.operator == "*": return a * b
-                if expression.operator == "/": return a / b
-                if expression.operator == "%": return a % b
+                if expression.operator in ('/', '%'):
+                    if type(a) is int and type(b) is int:
+                        # Cypher integer division truncates toward zero, without float rounding.
+                        quotient = (abs(a) // abs(b)) * (-1 if (a < 0) != (b < 0) else 1)
+                        return quotient if expression.operator == '/' else a - quotient * b
+                    return a / b if expression.operator == '/' else math.fmod(a, b)
             except (ValueError, TypeError, ZeroDivisionError) as exc:
                 raise EvaluationError(f"Invalid arithmetic {expression.operator}: {exc}") from exc
         if isinstance(expression, FunctionCall):
@@ -240,8 +255,9 @@ class BagEvaluator:
             if a is None or b is None:
                 return None
             try:
-                if pred.operator == "=": return _freeze(a) == _freeze(b)
-                if pred.operator == "<>": return _freeze(a) != _freeze(b)
+                if pred.operator in ('=', '<>'):
+                    equal = _equal(a, b)
+                    return equal if pred.operator == '=' or equal is None else not equal
                 if pred.operator == "<": return a < b
                 if pred.operator == "<=": return a <= b
                 if pred.operator == ">": return a > b
@@ -360,10 +376,7 @@ class BagEvaluator:
                 call = aggregate.expression
                 args = ([self.value(call.argument, row) for row in rows]
                         if call.argument is not None else [1] * len(rows))
-                if call.name != "count":
-                    args = [a for a in args if a is not None]
-                elif call.argument is not None:
-                    args = [a for a in args if a is not None]
+                args = [a for a in args if a is not None]
                 if call.distinct:
                     dedup = set()
                     distinct_args = []
@@ -373,6 +386,8 @@ class BagEvaluator:
                             distinct_args.append(a)
                             dedup.add(f)
                     args = distinct_args
+                if call.name in ('sum', 'avg') and any(type(a) not in (int, float) for a in args):
+                    raise EvaluationError(f'{call.name} requires numeric values in this evaluator')
                 if call.name == "count": value = len(args)
                 elif call.name == "sum": value = sum(args)
                 elif call.name == "avg": value = sum(args) / len(args) if args else None

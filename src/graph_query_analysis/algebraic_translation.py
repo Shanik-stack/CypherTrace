@@ -9,7 +9,7 @@ from typing import Sequence
 from graph_query_analysis.expressions import (
     Add, AggregateBag, AggregateCall, AllOf, AnyOf, Arithmetic, Comparison,
     DistinctBag, EmptyBag, ExtendBag, FilterBag, FunctionCall, GroupKey,
-    HasLabel, Indicator, IsNull, MatchBag, MultiplicityConstant,
+    HasLabel, Indicator, IsNull, MatchBag, MultiplicityConstant, ParameterReference,
     MultiplicityExpression, Multiply, Negation, NodeInGraph, Predicate,
     ProjectBag, PropertyAccess, RelationshipHolds, SameValue, SliceBag,
     SortBag, SumOver, Support, SymbolReference, StringPredicate, TruthLiteral, ValueExpression,
@@ -206,12 +206,12 @@ def _substitute_aggregates(expression: ValueExpression,
     return expression
 
 
-def symbolic_bag(bag: BagExpression) -> SymbolicBag:
-    """Interpret the compiled operator tree without a database.
+def symbolic_bag(bag: BagExpression, cache: dict[int, SymbolicBag] | None = None) -> SymbolicBag:
+    """Interpret an operator using symbolic bag mathematics, caching prior stages.
 
     Project uses total row-value equality, not Cypher three-valued `=`.
     """
-    return _symbolic_bag(bag, {})
+    return _symbolic_bag(bag, cache if cache is not None else {})
 
 
 def _symbolic_bag(bag: BagExpression, cache: dict[int, SymbolicBag]) -> SymbolicBag:
@@ -333,6 +333,11 @@ def format_value(value: ValueExpression) -> str:
         return _name(value.symbol)
     if isinstance(value, ValueLiteral):
         return repr(value.value)
+    if isinstance(value, ParameterReference):
+        return '$' + value.name
+    if isinstance(value, AggregateCall):
+        argument = format_value(value.argument) if value.argument is not None else '*'
+        return f"{value.name.upper()}({'DISTINCT ' if value.distinct else ''}{argument})"
     if isinstance(value, Arithmetic):
         return f"({format_value(value.left)} {value.operator} {format_value(value.right)})"
     if isinstance(value, PropertyAccess):
@@ -342,7 +347,10 @@ def format_value(value: ValueExpression) -> str:
     if isinstance(value, RowCount):
         return f"COUNT_ROWS({format_multiplicity(value.amount)})"
     if isinstance(value, AggregateDenotation):
-        return f"{value.call.name.upper()}[group]({format_value(value.call.argument) if value.call.argument else '*'})"
+        inputs = ', '.join(_name(s) for s in value.bound_inputs)
+        condition = format_predicate(value.group_predicate) if value.group_predicate else 'TRUE'
+        return (f'{format_value(value.call)} OVER {{{inputs}; '
+                f'weight={format_multiplicity(value.source_multiplicity)}; group={condition}}}')
     return repr(value)
 
 

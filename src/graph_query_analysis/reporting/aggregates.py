@@ -5,7 +5,8 @@ witness through projection, DISTINCT and aggregation. It separates influences
 on *input occurrence counts* from influences on mere *group eligibility*.
 """
 from graph_query_analysis.reporting.core import AnalysisContext, Insight, Section, referenced_symbols
-from graph_query_analysis.expressions import AggregateBag, AggregateCall, SymbolReference
+from graph_query_analysis.expressions import AggregateBag, AggregateCall, PropertyAccess, SymbolReference
+from graph_query_analysis.cypher_types import infer_type
 
 
 def _count_unit(ctx: AnalysisContext, agg: AggregateCall, clause: int) -> str:
@@ -41,6 +42,7 @@ def build(ctx: AnalysisContext) -> Section:
 
         occurrence = input_effects.symbols('occurrences')
         distinct_keys = input_effects.symbols('distinct_keys')
+        group_keys = input_effects.symbols('group_keys')
         eligibility = input_effects.symbols('eligibility')
         unknown = input_effects.symbols('unknown')
         if occurrence:
@@ -52,6 +54,9 @@ def build(ctx: AnalysisContext) -> Section:
         if eligibility:
             details.append('  Earlier witnesses reduced to eligibility-only influence: ' +
                            ', '.join(ctx.symbol(s, event.clause) for s in eligibility) + '.')
+        if group_keys:
+            details.append('  Earlier grouping-key influences: ' +
+                           ', '.join(ctx.symbol(s, event.clause) for s in group_keys) + '.')
         if unknown:
             details.append('  The influence of preceding SKIP/LIMIT is not determined: ' +
                            ', '.join(ctx.symbol(s, event.clause) for s in unknown) + '.')
@@ -87,9 +92,10 @@ def build(ctx: AnalysisContext) -> Section:
                     evidence=(f'grouping={groups or "global"}', f'argument={argument}')))
                 if (not call.distinct and isinstance(call.argument, SymbolReference)
                         and (ctx.is_node(call.argument.symbol, event.clause)
-                             or ctx.is_relationship(call.argument.symbol, event.clause))):
-                    details.append('    The counted node/relationship binding originates in mandatory MATCH; '
-                                   'in the supported fragment its occurrences are non-NULL.')
+                             or ctx.is_relationship(call.argument.symbol, event.clause))
+                        and not infer_type(call.argument, event.before).nullable):
+                    details.append('    The argument is known to be a non-NULL entity binding '
+                                   'at this input stage, so every input occurrence is counted.')
 
             # DISTINCT on the aggregate *argument* cancels repeated occurrences
             # of equal argument values, but does not cancel their eligibility.
@@ -108,12 +114,12 @@ def build(ctx: AnalysisContext) -> Section:
                                        + ctx.symbol(s, event.clause) for s in other),
                         intent_check='Should the aggregate count row assignments or distinct entities/values?'))
                 # DISTINCT can preserve the *number of distinct retained keys*.
-                relevant_keys = tuple(s for s in distinct_keys if s not in group_sources)
+                relevant_keys = tuple(s for s in (*distinct_keys, *group_keys) if s not in group_sources)
                 if relevant_keys:
                     keys = tuple(ctx.symbol(s, event.clause) for s in relevant_keys)
                     insights.append(Insight('AGG-DISTINCT-KEY-DEPENDENCY',
                         f'{call_text} is sensitive to retained distinct keys',
-                        'Earlier DISTINCT removed duplicate projected tuples, but '
+                        'An earlier DISTINCT or grouping formed separate key tuples, and '
                         'the number of *different* retained tuples can still influence '
                         f'{call_text}. Key dependencies: ' + ', '.join(keys) + '.',
                         'possible', 'high', event.clause, evidence=keys))
@@ -140,18 +146,19 @@ def build(ctx: AnalysisContext) -> Section:
                     details.append('    Retained distinct-key dependencies may influence '
                                    'which different argument values are present.')
 
-            if eligibility:
+            if eligibility and input_effects.reduction:
+                reduction_clause, reduction_kind = input_effects.reduction
                 names = tuple(ctx.symbol(s, event.clause) for s in eligibility)
                 details.append('    Eligibility dependencies from earlier collapsed witnesses: ' +
                                ', '.join(names) + '. They are not direct raw row multipliers.')
                 insights.append(Insight('AGG-ELIGIBILITY-AFTER-REDUCTION',
-                    'Earlier relationship/node witnesses can affect eligibility after DISTINCT',
-                    'Witnesses ' + ', '.join(names) + ' were collapsed by earlier DISTINCT or '
-                    'grouping. Their prior assignment counts must not be multiplied into '
+                    f'Earlier witnesses can affect eligibility after {reduction_kind}',
+                    'Witnesses ' + ', '.join(names) + f' were reduced at clause {reduction_clause} '
+                    f'by {reduction_kind}. Their prior assignment counts must not be multiplied into '
                     f'{call_text}; matching them can still be required for an input group/value to exist.',
                     'entailed', 'high', event.clause, evidence=(call_text, *names)))
 
-            if call.name == 'avg' and not call.distinct and (occurrence or distinct_keys):
+            if call.name == 'avg' and not call.distinct and occurrence:
                 insights.append(Insight('AGG-AVG-WEIGHTING', 'AVG weights row occurrences',
                     f'{call_text} weights each non-NULL input according to its number of '
                     'occurrences; unequal multiplicity factors can change the average.',
@@ -170,11 +177,22 @@ def build(ctx: AnalysisContext) -> Section:
                     'equal non-NULL values can occur more than once without DISTINCT.',
                     'unsupported', 'medium', event.clause))
             if call.distinct:
-                insights.append(Insight('AGG-DISTINCT-ARGUMENT', 'DISTINCT applies to argument values',
-                    f'{call_text} deduplicates {argument}, not necessarily source entities. '
-                    'Equal property values from different nodes may collapse.',
-                    'entailed', 'high', event.clause,
-                    intent_check='Should distinctness apply to values or entity identities?'))
+                argument_type = infer_type(call.argument, event.before).name
+                if argument_type in ('NODE', 'RELATIONSHIP'):
+                    explanation = (f'{call_text} deduplicates {argument} by '
+                        f'{argument_type.lower()} identities. Different entities remain distinct '
+                        'even when all their property values are equal.')
+                    intent_check = None
+                elif isinstance(ctx.origin_expression(call.argument), PropertyAccess):
+                    explanation = (f'{call_text} deduplicates the property values of {argument}. '
+                        'Equal property values from different nodes may collapse.')
+                    intent_check = 'Should distinctness apply to property values or entity identities?'
+                else:
+                    explanation = (f'{call_text} deduplicates non-NULL values of {argument}. '
+                        'Entity values compare by identity; other values use Cypher value equality.')
+                    intent_check = None
+                insights.append(Insight('AGG-DISTINCT-ARGUMENT', 'DISTINCT comparison follows the argument type',
+                    explanation, 'entailed', 'high', event.clause, intent_check=intent_check))
             if call.argument is not None:
                 details.append('    NULL handling: aggregate arguments that evaluate to NULL '
                                'are ignored by this aggregate.')

@@ -46,6 +46,7 @@ def build(ctx: AnalysisContext) -> Section:
                 for kind, explanation in (
                     ('occurrences', 'input occurrence counts'),
                     ('distinct_keys', 'number of retained distinct keys'),
+                    ('group_keys', 'number of earlier grouping keys'),
                     ('eligibility', 'input eligibility, not raw multiplicity')):
                     witnesses = facts.symbols(kind)
                     if witnesses:
@@ -59,7 +60,7 @@ def build(ctx: AnalysisContext) -> Section:
                            'could not be identified uniquely; no witness-specific '
                            'multiplication claim is made.')
         else:
-            active = final_effects.symbols('occurrences', 'distinct_keys')
+            active = final_effects.symbols('occurrences', 'distinct_keys', 'group_keys')
             only_eligibility = final_effects.symbols('eligibility')
             if active:
                 details.append('  Potential result occurrence/key dependencies: ' +

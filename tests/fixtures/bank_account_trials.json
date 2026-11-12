@@ -1,0 +1,1343 @@
+[
+  {
+    "question": "What is the average balance of BankAccounts associated with FinancialInstitutes that have names starting with 'S', and what is the total number of such BankAccounts?",
+    "schema": {
+      "metadata": {
+        "constraint": null,
+        "index": null
+      },
+      "node_props": {
+        "AccountHolder": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "Address": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "BankAccount": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "lastReceived",
+            "type": "INTEGER"
+          },
+          {
+            "property": "lastSend",
+            "type": "INTEGER"
+          }
+        ],
+        "BankCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "CreditCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "DeliveryAddress": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "FinancialInstitute": [
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "website",
+            "type": "STRING"
+          }
+        ],
+        "Flagged": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "IP": [
+          {
+            "property": "ip",
+            "type": "STRING"
+          }
+        ],
+        "Login": [
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          },
+          {
+            "property": "mail",
+            "type": "STRING"
+          },
+          {
+            "property": "startDate",
+            "type": "INTEGER"
+          },
+          {
+            "property": "userid",
+            "type": "STRING"
+          }
+        ],
+        "MoneyTransfer": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "transactionDate",
+            "type": "STRING"
+          }
+        ],
+        "PhoneNumber": [
+          {
+            "property": "phone",
+            "type": "STRING"
+          },
+          {
+            "property": "provider",
+            "type": "STRING"
+          },
+          {
+            "property": "touched",
+            "type": "INTEGER"
+          }
+        ],
+        "Purchase": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "date",
+            "type": "STRING"
+          },
+          {
+            "property": "purchaseCode",
+            "type": "STRING"
+          },
+          {
+            "property": "time",
+            "type": "INTEGER"
+          }
+        ],
+        "SSN": [
+          {
+            "property": "ssn",
+            "type": "STRING"
+          }
+        ],
+        "Shop": [
+          {
+            "property": "business",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "shopID",
+            "type": "STRING"
+          }
+        ],
+        "State": [
+          {
+            "property": "name",
+            "type": "STRING"
+          }
+        ],
+        "UnsecuredLoan": [
+          {
+            "property": "APR",
+            "type": "STRING"
+          },
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "loanAmount",
+            "type": "FLOAT"
+          }
+        ],
+        "_Bloom_Perspective_": [
+          {
+            "property": "data",
+            "type": "STRING"
+          },
+          {
+            "property": "id",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "roles",
+            "type": "LIST"
+          },
+          {
+            "property": "version",
+            "type": "STRING"
+          }
+        ]
+      },
+      "rel_props": {
+        "DELIVERED_AT": [],
+        "FOR_SHOP": [],
+        "FROM": [],
+        "FROM_IP": [],
+        "HAS_ADDRESS": [],
+        "HAS_BANKACCOUNT": [],
+        "HAS_CREDITCARD": [],
+        "HAS_PHONENUMBER": [],
+        "HAS_SSN": [],
+        "HAS_UNSECUREDLOAN": [],
+        "LOCATED_IN": [],
+        "SEND": [],
+        "WITH": [
+          {
+            "property": "lastUsed",
+            "type": "INTEGER"
+          }
+        ],
+        "WITH_CARD": [],
+        "WITH_LOGIN": []
+      },
+      "relationships": [
+        {
+          "end": "Address",
+          "start": "AccountHolder",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "AccountHolder",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "AccountHolder",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "AccountHolder",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "AccountHolder",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "AccountHolder",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "FinancialInstitute",
+          "start": "BankAccount",
+          "type": "FROM"
+        },
+        {
+          "end": "MoneyTransfer",
+          "start": "BankAccount",
+          "type": "SEND"
+        },
+        {
+          "end": "Address",
+          "start": "Flagged",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "Flagged",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "Flagged",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "Flagged",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "Flagged",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "Flagged",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "State",
+          "start": "IP",
+          "type": "LOCATED_IN"
+        },
+        {
+          "end": "Shop",
+          "start": "Login",
+          "type": "FOR_SHOP"
+        },
+        {
+          "end": "BankAccount",
+          "start": "MoneyTransfer",
+          "type": "SEND"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "MoneyTransfer",
+          "type": "WITH"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "PhoneNumber",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "DeliveryAddress",
+          "start": "Purchase",
+          "type": "DELIVERED_AT"
+        },
+        {
+          "end": "IP",
+          "start": "Purchase",
+          "type": "FROM_IP"
+        },
+        {
+          "end": "BankCard",
+          "start": "Purchase",
+          "type": "WITH_CARD"
+        },
+        {
+          "end": "Login",
+          "start": "Purchase",
+          "type": "WITH_LOGIN"
+        }
+      ]
+    },
+    "cypher": "MATCH (f:FinancialInstitute) WHERE f.name STARTS WITH 'S' MATCH (b:BankAccount)-[:FROM]->(f) RETURN avg(b.balance) AS avgBalance, count(b) AS totalAccounts"
+  },
+  {
+    "question": "What is the average balance of BankAccounts associated with FinancialInstitutes that have names starting with 'S', and what is the total number of such BankAccounts?",
+    "schema": {
+      "metadata": {
+        "constraint": null,
+        "index": null
+      },
+      "node_props": {
+        "AccountHolder": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "Address": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "BankAccount": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "lastReceived",
+            "type": "INTEGER"
+          },
+          {
+            "property": "lastSend",
+            "type": "INTEGER"
+          }
+        ],
+        "BankCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "CreditCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "DeliveryAddress": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "FinancialInstitute": [
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "website",
+            "type": "STRING"
+          }
+        ],
+        "Flagged": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "IP": [
+          {
+            "property": "ip",
+            "type": "STRING"
+          }
+        ],
+        "Login": [
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          },
+          {
+            "property": "mail",
+            "type": "STRING"
+          },
+          {
+            "property": "startDate",
+            "type": "INTEGER"
+          },
+          {
+            "property": "userid",
+            "type": "STRING"
+          }
+        ],
+        "MoneyTransfer": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "transactionDate",
+            "type": "STRING"
+          }
+        ],
+        "PhoneNumber": [
+          {
+            "property": "phone",
+            "type": "STRING"
+          },
+          {
+            "property": "provider",
+            "type": "STRING"
+          },
+          {
+            "property": "touched",
+            "type": "INTEGER"
+          }
+        ],
+        "Purchase": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "date",
+            "type": "STRING"
+          },
+          {
+            "property": "purchaseCode",
+            "type": "STRING"
+          },
+          {
+            "property": "time",
+            "type": "INTEGER"
+          }
+        ],
+        "SSN": [
+          {
+            "property": "ssn",
+            "type": "STRING"
+          }
+        ],
+        "Shop": [
+          {
+            "property": "business",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "shopID",
+            "type": "STRING"
+          }
+        ],
+        "State": [
+          {
+            "property": "name",
+            "type": "STRING"
+          }
+        ],
+        "UnsecuredLoan": [
+          {
+            "property": "APR",
+            "type": "STRING"
+          },
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "loanAmount",
+            "type": "FLOAT"
+          }
+        ],
+        "_Bloom_Perspective_": [
+          {
+            "property": "data",
+            "type": "STRING"
+          },
+          {
+            "property": "id",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "roles",
+            "type": "LIST"
+          },
+          {
+            "property": "version",
+            "type": "STRING"
+          }
+        ]
+      },
+      "rel_props": {
+        "DELIVERED_AT": [],
+        "FOR_SHOP": [],
+        "FROM": [],
+        "FROM_IP": [],
+        "HAS_ADDRESS": [],
+        "HAS_BANKACCOUNT": [],
+        "HAS_CREDITCARD": [],
+        "HAS_PHONENUMBER": [],
+        "HAS_SSN": [],
+        "HAS_UNSECUREDLOAN": [],
+        "LOCATED_IN": [],
+        "SEND": [],
+        "WITH": [
+          {
+            "property": "lastUsed",
+            "type": "INTEGER"
+          }
+        ],
+        "WITH_CARD": [],
+        "WITH_LOGIN": []
+      },
+      "relationships": [
+        {
+          "end": "Address",
+          "start": "AccountHolder",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "AccountHolder",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "AccountHolder",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "AccountHolder",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "AccountHolder",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "AccountHolder",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "FinancialInstitute",
+          "start": "BankAccount",
+          "type": "FROM"
+        },
+        {
+          "end": "MoneyTransfer",
+          "start": "BankAccount",
+          "type": "SEND"
+        },
+        {
+          "end": "Address",
+          "start": "Flagged",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "Flagged",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "Flagged",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "Flagged",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "Flagged",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "Flagged",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "State",
+          "start": "IP",
+          "type": "LOCATED_IN"
+        },
+        {
+          "end": "Shop",
+          "start": "Login",
+          "type": "FOR_SHOP"
+        },
+        {
+          "end": "BankAccount",
+          "start": "MoneyTransfer",
+          "type": "SEND"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "MoneyTransfer",
+          "type": "WITH"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "PhoneNumber",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "DeliveryAddress",
+          "start": "Purchase",
+          "type": "DELIVERED_AT"
+        },
+        {
+          "end": "IP",
+          "start": "Purchase",
+          "type": "FROM_IP"
+        },
+        {
+          "end": "BankCard",
+          "start": "Purchase",
+          "type": "WITH_CARD"
+        },
+        {
+          "end": "Login",
+          "start": "Purchase",
+          "type": "WITH_LOGIN"
+        }
+      ]
+    },
+    "cypher": "MATCH (f:FinancialInstitute) WHERE f.name STARTS WITH 'S' MATCH (b:BankAccount)-[:FROM]->(f) RETURN avg(b.balance) AS avgBalance, count(DISTINCT b) AS totalAccounts"
+  },
+  {
+    "question": "What is the average balance of BankAccounts associated with FinancialInstitutes that have names starting with 'S', and what is the total number of such BankAccounts?",
+    "schema": {
+      "metadata": {
+        "constraint": null,
+        "index": null
+      },
+      "node_props": {
+        "AccountHolder": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "Address": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "BankAccount": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "lastReceived",
+            "type": "INTEGER"
+          },
+          {
+            "property": "lastSend",
+            "type": "INTEGER"
+          }
+        ],
+        "BankCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "CreditCard": [
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "expirationDate",
+            "type": "STRING"
+          },
+          {
+            "property": "latePayments",
+            "type": "FLOAT"
+          },
+          {
+            "property": "limit",
+            "type": "FLOAT"
+          },
+          {
+            "property": "securityCode",
+            "type": "STRING"
+          }
+        ],
+        "DeliveryAddress": [
+          {
+            "property": "city",
+            "type": "STRING"
+          },
+          {
+            "property": "state",
+            "type": "STRING"
+          },
+          {
+            "property": "streetAddress",
+            "type": "STRING"
+          },
+          {
+            "property": "zip",
+            "type": "STRING"
+          }
+        ],
+        "FinancialInstitute": [
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "website",
+            "type": "STRING"
+          }
+        ],
+        "Flagged": [
+          {
+            "property": "UniqueId",
+            "type": "STRING"
+          },
+          {
+            "property": "birthDate",
+            "type": "STRING"
+          },
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "fullName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          }
+        ],
+        "IP": [
+          {
+            "property": "ip",
+            "type": "STRING"
+          }
+        ],
+        "Login": [
+          {
+            "property": "firstName",
+            "type": "STRING"
+          },
+          {
+            "property": "lastName",
+            "type": "STRING"
+          },
+          {
+            "property": "mail",
+            "type": "STRING"
+          },
+          {
+            "property": "startDate",
+            "type": "INTEGER"
+          },
+          {
+            "property": "userid",
+            "type": "STRING"
+          }
+        ],
+        "MoneyTransfer": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "transactionDate",
+            "type": "STRING"
+          }
+        ],
+        "PhoneNumber": [
+          {
+            "property": "phone",
+            "type": "STRING"
+          },
+          {
+            "property": "provider",
+            "type": "STRING"
+          },
+          {
+            "property": "touched",
+            "type": "INTEGER"
+          }
+        ],
+        "Purchase": [
+          {
+            "property": "amount",
+            "type": "FLOAT"
+          },
+          {
+            "property": "date",
+            "type": "STRING"
+          },
+          {
+            "property": "purchaseCode",
+            "type": "STRING"
+          },
+          {
+            "property": "time",
+            "type": "INTEGER"
+          }
+        ],
+        "SSN": [
+          {
+            "property": "ssn",
+            "type": "STRING"
+          }
+        ],
+        "Shop": [
+          {
+            "property": "business",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "shopID",
+            "type": "STRING"
+          }
+        ],
+        "State": [
+          {
+            "property": "name",
+            "type": "STRING"
+          }
+        ],
+        "UnsecuredLoan": [
+          {
+            "property": "APR",
+            "type": "STRING"
+          },
+          {
+            "property": "accountNumber",
+            "type": "STRING"
+          },
+          {
+            "property": "balance",
+            "type": "FLOAT"
+          },
+          {
+            "property": "loanAmount",
+            "type": "FLOAT"
+          }
+        ],
+        "_Bloom_Perspective_": [
+          {
+            "property": "data",
+            "type": "STRING"
+          },
+          {
+            "property": "id",
+            "type": "STRING"
+          },
+          {
+            "property": "name",
+            "type": "STRING"
+          },
+          {
+            "property": "roles",
+            "type": "LIST"
+          },
+          {
+            "property": "version",
+            "type": "STRING"
+          }
+        ]
+      },
+      "rel_props": {
+        "DELIVERED_AT": [],
+        "FOR_SHOP": [],
+        "FROM": [],
+        "FROM_IP": [],
+        "HAS_ADDRESS": [],
+        "HAS_BANKACCOUNT": [],
+        "HAS_CREDITCARD": [],
+        "HAS_PHONENUMBER": [],
+        "HAS_SSN": [],
+        "HAS_UNSECUREDLOAN": [],
+        "LOCATED_IN": [],
+        "SEND": [],
+        "WITH": [
+          {
+            "property": "lastUsed",
+            "type": "INTEGER"
+          }
+        ],
+        "WITH_CARD": [],
+        "WITH_LOGIN": []
+      },
+      "relationships": [
+        {
+          "end": "Address",
+          "start": "AccountHolder",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "AccountHolder",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "AccountHolder",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "AccountHolder",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "AccountHolder",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "AccountHolder",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "FinancialInstitute",
+          "start": "BankAccount",
+          "type": "FROM"
+        },
+        {
+          "end": "MoneyTransfer",
+          "start": "BankAccount",
+          "type": "SEND"
+        },
+        {
+          "end": "Address",
+          "start": "Flagged",
+          "type": "HAS_ADDRESS"
+        },
+        {
+          "end": "BankAccount",
+          "start": "Flagged",
+          "type": "HAS_BANKACCOUNT"
+        },
+        {
+          "end": "CreditCard",
+          "start": "Flagged",
+          "type": "HAS_CREDITCARD"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "Flagged",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "SSN",
+          "start": "Flagged",
+          "type": "HAS_SSN"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "Flagged",
+          "type": "HAS_UNSECUREDLOAN"
+        },
+        {
+          "end": "State",
+          "start": "IP",
+          "type": "LOCATED_IN"
+        },
+        {
+          "end": "Shop",
+          "start": "Login",
+          "type": "FOR_SHOP"
+        },
+        {
+          "end": "BankAccount",
+          "start": "MoneyTransfer",
+          "type": "SEND"
+        },
+        {
+          "end": "PhoneNumber",
+          "start": "MoneyTransfer",
+          "type": "WITH"
+        },
+        {
+          "end": "UnsecuredLoan",
+          "start": "PhoneNumber",
+          "type": "HAS_PHONENUMBER"
+        },
+        {
+          "end": "DeliveryAddress",
+          "start": "Purchase",
+          "type": "DELIVERED_AT"
+        },
+        {
+          "end": "IP",
+          "start": "Purchase",
+          "type": "FROM_IP"
+        },
+        {
+          "end": "BankCard",
+          "start": "Purchase",
+          "type": "WITH_CARD"
+        },
+        {
+          "end": "Login",
+          "start": "Purchase",
+          "type": "WITH_LOGIN"
+        }
+      ]
+    },
+    "cypher": "MATCH (f:FinancialInstitute) WHERE f.name STARTS WITH 'S' MATCH (b:BankAccount)-[:FROM]->(f) WITH DISTINCT b RETURN avg(b.balance) AS avgBalance, count(*) AS totalAccounts"
+  }
+]

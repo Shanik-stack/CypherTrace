@@ -1,0 +1,16 @@
+{
+  "evaluate": true,
+  "dataset_name": "mtq",
+  "split": "test",
+  "limit": 100,
+  "validation_type": "manual",
+  "max_revisions": 2,
+  "max_report_chars": 2000,
+  "llm_as_judge": "True",
+  "agent": {
+    "service": "open_router",
+    "model": null,
+    "max_output_tokens": 8000,
+    "reasoning_effort": "minimal"
+  }
+}

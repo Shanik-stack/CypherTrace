@@ -15,17 +15,14 @@ from graph_query_analysis.transforms import (
 )
 
 
-def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
-    """Return the initial state followed by one state per successfully compiled clause.
+def compile_request_progress(request: AnalysisRequest) -> tuple[tuple[SymbolicState, ...], Exception | None]:
+    """Compile in order; retain valid states and the first failed transition.
 
-    Raise an informative error on the first semantic transformation failure.
-    Nothing after a failed clause is compiled because its input state is invalid.
+    This is used by reporting so a query failing at clause N still has an
+    explanation of clauses 1..N-1. It never applies a later clause to an
+    invalid state.
     """
-    clauses = request.clauses
-    if not clauses:
-        raise TransformError("Query contains no clauses")
-    if clauses[-1]["type"] != "Return":
-        raise UnsupportedCypherError("Only queries ending in RETURN are supported")
+
 
     state = SymbolicState(
         schema=request.schema,
@@ -34,6 +31,10 @@ def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
         graph=GraphSnapshot.empty(),
     )
     states = [state]
+    clauses = request.clauses
+    if not clauses:
+        return tuple(states), TransformError("Query contains no clauses")
+
     for index, clause in enumerate(clauses, start=1):
         kind = clause["type"]
         try:
@@ -41,9 +42,20 @@ def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
                 raise UnsupportedCypherError("RETURN must be the final clause")
             state = transform_clause(state, clause)
         except (TransformError, UnsupportedCypherError) as exc:
-                raise type(exc)(f"Clause {index} ({kind}): {exc}") from exc
+            return tuple(states), type(exc)(f"Clause {index} ({kind}): {exc}")
         states.append(state)
-    return tuple(states)
+
+    if clauses[-1]["type"] != "Return":
+        return tuple(states), UnsupportedCypherError("Only queries ending in RETURN are supported")
+    return tuple(states), None
+
+
+def compile_request(request: AnalysisRequest) -> tuple[SymbolicState, ...]:
+    """Return all states, or raise the first compilation error."""
+    states, error = compile_request_progress(request)
+    if error is not None:
+        raise error
+    return states
 
 
 def compile_requests(

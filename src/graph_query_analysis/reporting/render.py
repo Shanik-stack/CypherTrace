@@ -1,5 +1,4 @@
 """Deterministic plain-text presentation with a technical symbolic appendix."""
-from graph_query_analysis.reporting.core import Insight
 
 
 def render(report, *, show_formulas: bool = True, max_formula_chars: int | None = 3500) -> str:
@@ -11,7 +10,14 @@ def render(report, *, show_formulas: bool = True, max_formula_chars: int | None 
     lines.extend(['COMPOSITIONAL SEMANTIC EXPLANATION — CYPHER 25',
                   '=' * 48, f'Compilation: {report.status}',
                   f'Schema completeness: {report.schema_completeness}',
-                  'Graph records accessed: none', 'Query:', report.query_text])
+                  'Graph records accessed: none',
+                  'Verification: Python semantic analysis; no formal proof certificate',
+                  'Query:', report.query_text])
+    if report.compilation_error:
+        section('Analysis could not compile this query')
+        lines.append(report.compilation_error)
+        lines.append('An unsupported construct is not necessarily invalid in Neo4j.')
+        return '\n'.join(lines) + '\n'
     section('1. Query semantic fingerprint')
     for line in report.semantic_fingerprint:
         lines.append('  ' + line)
@@ -37,6 +43,9 @@ def render(report, *, show_formulas: bool = True, max_formula_chars: int | None 
         if sec.insights:
             lines.append('  Derived findings:')
             for finding in sec.insights:
+                if finding in report.priority_insights:
+                    lines.append(f'  - [{finding.rule_id}] See the finding above.')
+                    continue
                 lines.append(f'  - [{finding.rule_id} | {finding.certainty}] {finding.title}')
                 lines.append('    ' + finding.explanation)
                 if finding.evidence:
@@ -71,7 +80,8 @@ def render(report, *, show_formulas: bool = True, max_formula_chars: int | None 
     section('6. Interpretation boundaries and remaining capabilities')
     lines.extend([
         '  - This reports properties of the compiled query, not intent correctness.',
-        '  - CONDITIONAL findings describe behavior on some compatible graphs, not observed data.',
+        '  - POSSIBLE findings describe potential effects, not observed database facts.',
+        '  - ENTAILED means derived under the implemented semantics, not kernel-checked proof.',
         '  - UNKNOWN schema facts cannot justify claims about actual entity existence.',
         '  - No contradiction solver, query equivalence prover or database execution is used.',
         '  - OPTIONAL MATCH, variable-length patterns, subqueries and writes are not modeled here.',

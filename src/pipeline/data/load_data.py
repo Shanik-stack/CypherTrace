@@ -1,82 +1,48 @@
 
+
 import json
-from copy import deepcopy
+from pathlib import Path
 
+from pipeline.data.preprocess import preprocess_cypherbench, preprocess_mtq
 from datasets import load_dataset
-from huggingface_hub import hf_hub_download
-
-from pipeline.data.neo4j_schema import Neo4jSchema
 
 
-def normalize_schema_row(row):
-    return {
-        'schema': json.dumps(Neo4jSchema(row['schema']).to_dict(),sort_keys=True,)
-    }
+def load_records(dataset_name='mtq', split='train', indices=None, limit=None,
+                 validation_type='manual'):
+    #get MindTheQuery
+    if dataset_name == 'mtq':
+        rows = load_dataset('endeavorXx/Mind-the-Query', name=validation_type, split=split)
+    #get cyberbench
+    else:
+        from huggingface_hub import hf_hub_download
+        rows = load_dataset('json', data_files='hf://datasets/megagonlabs/cypherbench/test.json', split='train')
+    
+    #define set of indices to evaluate on subset of dataset to avoid large llm calls
+    if indices is None:
+        count = len(rows) if limit == 'total' else (limit if limit is not None else 1)
+        indices = range(count)
 
+    selected = []
+    schemas = {}
 
-class MTQ_dataset:
-    def __init__(self, validation_type='manual'):
-        self.dataset = load_dataset('endeavorXx/Mind-the-Query', name=validation_type)
+    for index in indices:
+        row = dict(rows[index])
+        
+        #shcema present in mtq row
+        if dataset_name == 'mtq':
+            selected.append(preprocess_mtq(row))
 
-        # Normalize the schema column in every split once at load time.
-        # Keep JSON strings so Hugging Face's Arrow column stays homogeneous.
-        self.dataset = self.dataset.map(normalize_schema_row,)
-        self.train_dataset = self.dataset['train']
-        self.test_dataset = self.dataset['test']
+        else:
+            graph = row['graph']
 
-    def __len__(self):
-        return len(self.test_dataset)
+            if graph not in schemas:
+                path = hf_hub_download(
+                    repo_id='megagonlabs/cypherbench',
+                    filename=f'graphs/schemas/{graph}_schema.json',
+                    repo_type='dataset'
+                )
+                schemas[graph] = json.loads(Path(path).read_text(encoding='utf-8'))
 
-    def __getitem__(self, index):
-        row = dict(self.test_dataset[index])
-        # Decode the already-normalized schema, without re-normalizing.
-        row['schema'] = json.loads(row['schema'])
-        return row
+            selected.append(preprocess_cypherbench(row, schemas[graph]))
 
-    def get_schemas(self, split='test', unique=False):
-        items = self.dataset[split]['schema']
-        if unique:
-            items = list(dict.fromkeys(items))
-        return [json.loads(text) for text in items]
-
-
-class CypherBench_dataset:
-    def __init__(self, repo='megagonlabs/cypherbench'):
-        dataset = load_dataset(
-            'json', data_files=f'hf://datasets/{repo}/test.json', split='train'
-        )
-        self.schemas = {}
-        for graph in sorted(set(dataset['graph'])):
-            schema_path = hf_hub_download(
-                repo_id=repo,
-                filename=f'graphs/schemas/{graph}_schema.json',
-                repo_type='dataset',
-            )
-            with open(schema_path, encoding='utf-8') as f:
-                self.schemas[graph] = Neo4jSchema(json.load(f)).to_dict()
-        self.records = [{
-            'question': row['nl_question'],
-            'schema': self.schemas[row['graph']],
-            'cypher': row['gold_cypher'],  
-            'expected_result': row['answer_json'],
-            'graph': row['graph'],
-            'qid': row.get('qid'),
-        } for row in dataset]
-
-    def __len__(self):
-        return len(self.records)
-
-    def __getitem__(self, index):
-        item = dict(self.records[index])
-        item['schema'] = deepcopy(item['schema'])
-        return item
-
-
-if __name__ == '__main__':
-    mtq = MTQ_dataset()
-    cyb = CypherBench_dataset()
-    for dataset in (mtq, cyb):
-        item = dataset[0]
-        print(item['question'])
-        print(item['cypher'])
-        print(json.dumps(item['schema'], indent=2))
+    return selected

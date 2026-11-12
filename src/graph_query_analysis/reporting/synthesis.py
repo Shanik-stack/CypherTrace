@@ -34,13 +34,16 @@ def fingerprint(ctx: AnalysisContext) -> tuple[str, ...]:
     conditions = [e for e in ctx.events if isinstance(e.operator, FilterBag)]
     lines.append('Eligibility: ' + ('; '.join(ctx.predicate(e.operator.predicate) for e in conditions)
                  if conditions else 'mandatory MATCH requirements only') + '.')
-    agg = next((e.operator for e in reversed(ctx.events)
-                if isinstance(e.operator, AggregateBag)), None)
-    if agg:
+    agg_event = next((e for e in reversed(ctx.events) if isinstance(e.operator, AggregateBag)), None)
+    if agg_event:
+        agg = agg_event.operator
         grouping = [ctx.expression(k.expression) for k in agg.grouping_keys]
-        lines.append('Result unit: ' + ('group per (' + ', '.join(grouping) + ')'
+        later_matches = any(isinstance(e.operator, MatchBag)
+                            for e in ctx.events[ctx.events.index(agg_event) + 1:])
+        lines.append('Result unit: ' + ('projected rows after a MATCH extending earlier aggregate groups'
+                     if later_matches else 'group per (' + ', '.join(grouping) + ')'
                      if grouping else 'single global aggregate group') + '.')
-        lines.append('Aggregate units: ' + '; '.join(ctx.expression(a.expression)
+        lines.append(f'Aggregate units at clause {agg_event.clause}: ' + '; '.join(ctx.expression(a.expression)
                      for a in agg.aggregate_computations) + '.')
     else:
         distinct = next((e for e in reversed(ctx.events)
