@@ -1,0 +1,1982 @@
+[
+  {
+    "query": "query-0",
+    "case": {
+      "source_index": 0,
+      "question": "What is the average purchase amount for purchases delivered to addresses in 'Montana'?",
+      "reference_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(da:DeliveryAddress {state: 'Montana'}) RETURN avg(p.amount) AS AveragePurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nWHERE a.state = 'Montana'\nRETURN avg(p.amount) AS averagePurchaseAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nWHERE a.state = 'Montana'\nRETURN avg(p.amount) AS averagePurchaseAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The candidate uses the same pattern (Purchase)-[:DELIVERED_AT]->(DeliveryAddress) with an exact equality filter a.state = 'Montana' expressed as a WHERE clause instead of an inline property predicate, which is semantically identical (neither matches NULL state, both are exact string matches). Aggregation is the same ungrouped avg(p.amount) over the same row set, returning the same NULL-on-empty result, so no counterexample can distinguish it from the reference."
+    }
+  },
+  {
+    "query": "query-1",
+    "case": {
+      "source_index": 1,
+      "question": "For each state, what is the average balance of credit cards held by account holders who have an address in that state?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address)-[:HAS_ADDRESS]-(s:State) WITH ah, s MATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) RETURN s.name, avg(cc.balance) AS AverageCreditCardBalance",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN addr.state AS state, avg(c.balance) AS averageBalance\nORDER BY state",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN addr.state AS state, avg(c.balance) AS averageBalance\nORDER BY state",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The generated query's output grain is (AccountHolder, Address, CreditCard): an account holder with two addresses in the same state has each of their credit cards counted once per address, so avg(c.balance) is weighted by the number of in-state addresses rather than over distinct credit cards. Counterexample: AH1 has two addresses in state X and one card (balance 100); AH2 has one address in state X and one card (balance 300). Correct average = (100+300)/2 = 200, but the generated query computes (100+100+300)/3 ≈ 166.7. It relies on the unsupported assumption of at most one address per holder per state. Separately, the reference is not equivalent: it traverses (a:Address)-[:HAS_ADDRESS]-(s:State), but the schema has no HAS_ADDRESS link between Address and State (State connects only via IP-[:LOCATED_IN]-State), so it matches nothing, and it groups by State.name rather than Address.state, a different data source."
+    }
+  },
+  {
+    "query": "query-2",
+    "case": {
+      "source_index": 2,
+      "question": "What is the average balance of all BankAccounts that are associated with FinancialInstitutes whose website contains 'net'?",
+      "reference_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'net' WITH ba.balance AS balance RETURN avg(balance) AS AverageBalance",
+      "initial_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'net' RETURN avg(ba.balance) AS averageBalance",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'net' RETURN avg(ba.balance) AS averageBalance",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same pattern (BankAccount)-[:FROM]->(FinancialInstitute) with the same CONTAINS 'net' filter and aggregate avg over ba.balance across the whole matched set with no grouping. The reference's intermediate WITH ba.balance AS balance is a pass-through that does not change the aggregation input, and avg ignores NULL balances identically in both cases; only the output alias differs."
+    }
+  },
+  {
+    "query": "query-3",
+    "case": {
+      "source_index": 3,
+      "question": "For each provider of PhoneNumber, what is the average amount of MoneyTransfer transactions associated with those phone numbers?",
+      "reference_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(pn:PhoneNumber) WITH pn.provider AS provider, mt.amount AS amount RETURN provider, avg(amount) AS AverageTransferAmount",
+      "initial_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate groups the same (MoneyTransfer)-[:WITH]->(PhoneNumber) rows by pn.provider and averages m.amount, which is exactly the per-provider average transfer amount (NULL providers form a NULL group in both). It differs from the reference, whose intermediate WITH (pn.provider, mt.amount) deduplicates amount values per provider, so the reference's outer avg() is an unweighted mean of distinct amounts: e.g. amounts 10, 10, 20 for one provider yield 15 in the reference but the correct 13.33 in the candidate."
+    }
+  },
+  {
+    "query": "query-4",
+    "case": {
+      "source_index": 4,
+      "question": "What is the average balance of CreditCards held by AccountHolders born before 1975, based on their birthDate?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE date(ah.birthDate) < date('1975-01-01') WITH cc.balance AS balance RETURN avg(balance) AS AverageCreditCardBalance",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate < '1975'\nRETURN avg(c.balance)",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate < '1975'\nRETURN avg(c.balance)",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "uncertain",
+      "reason": "Aggregation grain and NULL handling match (single avg over all matching card balances, rows without a card excluded in both), but birthDate is typed STRING with no format established. The candidate relies on lexicographic comparison a.birthDate < '1975', which reproduces date(birthDate) < date('1975-01-01') only for year-first (ISO-like) strings, including correctly excluding '1975' and '1975-01-01'. For a non-year-first but schema-legal value such as '03/15/1970' or '15/03/1970', the candidate silently matches every row ('0'/'1' < '5'), returning an average over all holders regardless of birth year, whereas the reference errors on date() parsing — so correctness cannot be established without assuming the string date format."
+    }
+  },
+  {
+    "query": "query-5",
+    "case": {
+      "source_index": 5,
+      "question": "What is the average amount of Purchases made using BankCards with a limit greater than 5000, grouped by the expirationDate of the BankCard?",
+      "reference_query": "MATCH (p:Purchase)-[:WITH_CARD]->(bc:BankCard) WHERE bc.limit > 5000 WITH bc.expirationDate AS expirationDate, p.amount AS amount RETURN expirationDate, avg(amount) AS AveragePurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nWHERE c.limit > 5000\nRETURN c.expirationDate AS expirationDate, avg(p.amount) AS averageAmount\nORDER BY expirationDate",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nWHERE c.limit > 5000\nRETURN c.expirationDate AS expirationDate, avg(p.amount) AS averageAmount\nORDER BY expirationDate",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both match (p:Purchase)-[:WITH_CARD]->(bc:BankCard) with bc.limit > 5000, group solely by bc.expirationDate, and return avg(p.amount) per group; the intermediate WITH in the reference and the added ORDER BY expirationDate are harmless presentation differences (each expirationDate appears once), so grouping grain, filter semantics, and NULL grouping are identical."
+    }
+  },
+  {
+    "query": "query-6",
+    "case": {
+      "source_index": 6,
+      "question": "For each state, what is the average balance of BankAccounts held by AccountHolders who have an address in that state?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(ad:Address) WITH ah, ad.state AS state MATCH (ah)-[:HAS_BANKACCOUNT]->(ba:BankAccount) WITH state, ba.balance AS balance RETURN state, avg(balance) AS AverageBankAccountBalance",
+      "initial_query": "MATCH (accountHolder:AccountHolder)-[:HAS_ADDRESS]->(address:Address)\nMATCH (accountHolder)-[:HAS_BANKACCOUNT]->(bankAccount:BankAccount)\nRETURN address.state AS state, avg(bankAccount.balance) AS averageBalance\nORDER BY state",
+      "initial_status": "compiled",
+      "final_query": "MATCH (accountHolder:AccountHolder)-[:HAS_ADDRESS]->(address:Address)\nMATCH (accountHolder)-[:HAS_BANKACCOUNT]->(bankAccount:BankAccount)\nRETURN address.state AS state, avg(bankAccount.balance) AS averageBalance\nORDER BY state",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries match AccountHolders with addresses and bank accounts, group by Address.state, and average BankAccount.balance. The candidate's ORDER BY only affects presentation, and NULL grouping/aggregation semantics match the reference."
+    }
+  },
+  {
+    "query": "query-7",
+    "case": {
+      "source_index": 7,
+      "question": "For each state, what is the average amount of purchases delivered there?",
+      "reference_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(da:DeliveryAddress) RETURN da.state, AVG(p.amount) AS averagePurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nRETURN a.state AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(a:DeliveryAddress)\nRETURN a.state AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same pattern (Purchase)-[:DELIVERED_AT]->(:DeliveryAddress), group by the delivery address state, and compute AVG(p.amount) with identical grouping grain; the only difference is an added ORDER BY averagePurchaseAmount DESC, which changes row presentation only, not the set of (state, average) results, since the question asks for all states with no top-N/LIMIT."
+    }
+  },
+  {
+    "query": "query-8",
+    "case": {
+      "source_index": 8,
+      "question": "What is the total amount of purchases made with bank cards, grouped by the expiration date of the bank card?",
+      "reference_query": "MATCH (p:Purchase)-[:WITH_CARD]->(bc:BankCard) RETURN bc.expirationDate, SUM(p.amount) AS totalPurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nRETURN c.expirationDate AS expirationDate, sum(p.amount) AS totalPurchaseAmount\nORDER BY expirationDate",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:WITH_CARD]->(c:BankCard)\nRETURN c.expirationDate AS expirationDate, sum(p.amount) AS totalPurchaseAmount\nORDER BY expirationDate",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Same MATCH pattern (Purchase)-[:WITH_CARD]->(BankCard), same grouping key (bc.expirationDate) and same aggregation SUM(p.amount); the only differences are a variable rename and an ORDER BY on the grouping key, which affects row presentation but not the grouped totals or their grain. NULL expirationDate values would still form their own group as in the reference."
+    }
+  },
+  {
+    "query": "query-9",
+    "case": {
+      "source_index": 9,
+      "question": "For each shop, what is the average purchase amount made by users who logged in to that shop?",
+      "reference_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop) RETURN s.name, AVG(p.amount) AS averagePurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nRETURN s.name AS shop, avg(p.amount) AS averagePurchaseAmount\nORDER BY shop",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nRETURN s.name AS shop, avg(p.amount) AS averagePurchaseAmount\nORDER BY shop",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Identical MATCH pattern, direction, and implicit grouping key (s.name) with AVG(p.amount); the only addition is ORDER BY shop, which reorders output rows without changing groups or aggregate values. Neither query uses DISTINCT, so both share the same multiplicity semantics, and the same name-based grouping caveat (distinct shops sharing a name would merge) applies equally to both."
+    }
+  },
+  {
+    "query": "query-10",
+    "case": {
+      "source_index": 10,
+      "question": "What is the average balance of BankAccounts associated with each FinancialInstitute?",
+      "reference_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute) WITH f, AVG(b.balance) AS averageBalance RETURN f.name, averageBalance",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nRETURN f.name AS financialInstitute, avg(b.balance) AS averageBalance\nORDER BY averageBalance DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nRETURN f.name AS financialInstitute, avg(b.balance) AS averageBalance\nORDER BY averageBalance DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The grouping key differs. The reference aggregates per FinancialInstitute node (WITH f, AVG(b.balance)), producing one row per institute node, while the candidate returns f.name, avg(...) so Cypher groups by the name value. FinancialInstitute has only name/website properties and the schema guarantees no uniqueness or non-null of name, so two distinct institute nodes sharing a name (or with null name) would be collapsed into a single averaged row, yielding fewer rows and a different average per institute than the question asks for. The added ORDER BY averageBalance DESC and the alias are harmless; the grouping-grain difference is not."
+    }
+  },
+  {
+    "query": "query-11",
+    "case": {
+      "source_index": 11,
+      "question": "For each state, what is the average purchase amount made by purchases originating from IPs located in that state?",
+      "reference_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State) WITH s, AVG(p.amount) AS averagePurchaseAmount RETURN s.name, averagePurchaseAmount",
+      "initial_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount\nORDER BY averagePurchaseAmount DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Same MATCH chain (Purchase)-[:FROM_IP]->(IP)-[:LOCATED_IN]->(State) and same aggregation AVG(p.amount). Cypher implicitly groups by the non-aggregated expression s.name, which produces the same per-state averages as the reference's WITH s, AVG(...) grouping (only differing if two distinct State nodes shared a name). The added ORDER BY averagePurchaseAmount DESC only changes row presentation, not the requested set of (state, average) pairs."
+    }
+  },
+  {
+    "query": "query-12",
+    "case": {
+      "source_index": 12,
+      "question": "What is the average balance of CreditCards held by AccountHolders, grouped by the state of the AccountHolder's address?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard) MATCH (ah)-[:HAS_ADDRESS]->(addr:Address) WITH addr.state AS state, AVG(cc.balance) AS averageBalance RETURN state, averageBalance",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (ah)-[:HAS_ADDRESS]->(addr:Address)\nRETURN addr.state AS state, avg(cc.balance) AS averageBalance\nORDER BY state",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (ah)-[:HAS_ADDRESS]->(addr:Address)\nRETURN addr.state AS state, avg(cc.balance) AS averageBalance\nORDER BY state",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The comma-separated MATCH pattern (ah)-[:HAS_CREDITCARD]->(cc), (ah)-[:HAS_ADDRESS]->(addr) enforces the same shared-variable join as the reference's two separate MATCH clauses. Both aggregate AVG(cc.balance) grouped by addr.state. The added ORDER BY state is a harmless presentation difference that does not alter the grouped aggregation results."
+    }
+  },
+  {
+    "query": "query-13",
+    "case": {
+      "source_index": 13,
+      "question": "Calculate the average amount of MoneyTransfers associated with each PhoneNumber provider.",
+      "reference_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(pn:PhoneNumber) WITH pn.provider AS provider, AVG(mt.amount) AS averageAmount RETURN provider, averageAmount",
+      "initial_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber) RETURN p.provider AS provider, avg(t.amount) AS averageAmount ORDER BY averageAmount DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber) RETURN p.provider AS provider, avg(t.amount) AS averageAmount ORDER BY averageAmount DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries group MoneyTransfer amounts by the provider of the PhoneNumber reached via (MoneyTransfer)-[:WITH]->(PhoneNumber), with the same implicit grouping key (pn.provider) and the same AVG(mt.amount) aggregation, so row multiplicity, NULL-provider grouping, and NULL-amount handling are identical. The candidate's ORDER BY averageAmount DESC only sorts the same result rows and the differing variable names are cosmetic."
+    }
+  },
+  {
+    "query": "query-14",
+    "case": {
+      "source_index": 14,
+      "question": "What is the average balance of UnsecuredLoans associated with AccountHolders, grouped by the city of their address?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) MATCH (ah)-[:HAS_ADDRESS]->(addr:Address) WITH addr.city AS city, AVG(ul.balance) AS averageBalance RETURN city, averageBalance",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_ADDRESS]->(ad:Address)\nRETURN ad.city AS city, avg(u.balance) AS averageBalance",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_ADDRESS]->(ad:Address)\nRETURN ad.city AS city, avg(u.balance) AS averageBalance",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same two-hop pattern (AccountHolder)-[:HAS_UNSECUREDLOAN]->(UnsecuredLoan) plus (AccountHolder)-[:HAS_ADDRESS]->(Address) with inner MATCHes, and implicitly group AVG(loan.balance) by the single non-aggregated key addr.city; the reference's extra WITH only renames/passes through city and averageBalance, so row multiplicity (multiple loans per holder, multiple addresses per holder) and NULL-balance handling in AVG are identical in both."
+    }
+  },
+  {
+    "query": "query-15",
+    "case": {
+      "source_index": 15,
+      "question": "What is the average balance of BankAccounts associated with FinancialInstitutes that have names starting with 'Muller', and what is the total number of such BankAccounts?",
+      "reference_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.name STARTS WITH 'Muller' WITH ba, fi RETURN avg(ba.balance) AS averageBalance, count(ba) AS totalAccounts",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE f.name STARTS WITH 'Muller'\nRETURN avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE f.name STARTS WITH 'Muller'\nRETURN avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The candidate matches the same pattern (BankAccount)-[:FROM]->(FinancialInstitute) with the same exact prefix filter f.name STARTS WITH 'Muller' and performs the same global aggregation avg(b.balance) and count(b); dropping the intermediate WITH and renaming variables/alias does not change row multiplicity or the single-group aggregation grain, so both queries return one row (null avg / 0 count when no matches)."
+    }
+  },
+  {
+    "query": "query-16",
+    "case": {
+      "source_index": 16,
+      "question": "For each provider of PhoneNumbers, what is the average amount of MoneyTransfers associated with those PhoneNumbers, and how many MoneyTransfers are associated with each provider?",
+      "reference_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(pn:PhoneNumber) WITH pn.provider AS provider, mt RETURN provider, avg(mt.amount) AS averageAmount, count(mt) AS totalTransfers ORDER BY provider",
+      "initial_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount, count(m) AS moneyTransferCount\nORDER BY provider",
+      "initial_status": "compiled",
+      "final_query": "MATCH (m:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nRETURN p.provider AS provider, avg(m.amount) AS averageAmount, count(m) AS moneyTransferCount\nORDER BY provider",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Candidate uses the identical pattern (MoneyTransfer)-[:WITH]->(PhoneNumber), groups implicitly by the only non-aggregate expression p.provider, and computes avg(m.amount) and count(m) over the same row set as the reference's explicit WITH pn.provider AS provider, mt grouping; NULL-provider grouping behavior and output columns/ordering match, so results are identical."
+    }
+  },
+  {
+    "query": "query-17",
+    "case": {
+      "source_index": 17,
+      "question": "What is the average balance of CreditCards held by AccountHolders with the last name 'Breckenridge', and what is the total limit of those CreditCards?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE ah.lastName = 'Breckenridge' WITH cc RETURN avg(cc.balance) AS averageBalance, sum(cc.limit) AS totalLimit",
+      "initial_query": "MATCH (a:AccountHolder {lastName: 'Breckenridge'})-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN avg(c.balance) AS averageBalance, sum(c.limit) AS totalLimit",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder {lastName: 'Breckenridge'})-[:HAS_CREDITCARD]->(c:CreditCard)\nRETURN avg(c.balance) AS averageBalance, sum(c.limit) AS totalLimit",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The inline property map {lastName: 'Breckenridge'} is an exact equality predicate, identical in semantics to the reference's WHERE ah.lastName = 'Breckenridge' (both exclude NULL lastName). The traversal pattern (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard) matches the reference exactly, and both aggregate at the same grain — one row per matched credit card — so avg(c.balance) and sum(c.limit) are computed over the identical multiset, with no DISTINCT/grouping-key differences. The intermediate WITH cc in the reference is a harmless pass-through, and both produce the same single output row (avg = null, sum = 0) when no matches exist."
+    }
+  },
+  {
+    "query": "query-18",
+    "case": {
+      "source_index": 18,
+      "question": "For each state, calculate the average purchase amount made by purchases originating from IPs located in that state, and also count the number of purchases.",
+      "reference_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State) WITH s.name AS state, p RETURN state, avg(p.amount) AS averagePurchaseAmount, count(p) AS numberOfPurchases ORDER BY state",
+      "initial_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount, count(p) AS purchaseCount\nORDER BY state",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nRETURN s.name AS state, avg(p.amount) AS averagePurchaseAmount, count(p) AS purchaseCount\nORDER BY state",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the identical path (p:Purchase)-[:FROM_IP]->(:IP)-[:LOCATED_IN]->(s:State), group by s.name, and compute avg(p.amount) and count(p); the reference's extra WITH is only a harmless projection of the same grouping key, so results match including exclusion of purchases whose IP has no State."
+    }
+  },
+  {
+    "query": "query-19",
+    "case": {
+      "source_index": 19,
+      "question": "What is the average balance across all BankAccounts, and what is the average loan amount for all UnsecuredLoans associated with AccountHolders?",
+      "reference_query": "MATCH (ba:BankAccount) WITH avg(ba.balance) AS avgBankAccountBalance MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) RETURN avgBankAccountBalance, avg(ul.loanAmount) AS avgLoanAmount",
+      "initial_query": "MATCH (ba:BankAccount)\nWITH avg(ba.balance) AS avgAccountBalance\nOPTIONAL MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan)\nRETURN avgAccountBalance, avg(ul.loanAmount) AS avgUnsecuredLoanAmount",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (ba:BankAccount)\nWITH avg(ba.balance) AS avgAccountBalance\nOPTIONAL MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan)\nRETURN avgAccountBalance, avg(ul.loanAmount) AS avgUnsecuredLoanAmount",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_failed"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Both compute avg(BankAccount.balance) in a grouping-less WITH (single row, unaffected by the later row multiplication) and then average ul.loanAmount over AccountHolder-[:HAS_UNSECUREDLOAN]->UnsecuredLoan paths, so results match whenever at least one such loan exists. They differ in the edge case: the candidate's OPTIONAL MATCH keeps the single aggregate row when no AccountHolder has an unsecured loan, returning (avgBalance, null), whereas the reference's inner MATCH yields zero rows. Also note both average over holder-loan paths, so a loan linked to multiple holders is counted multiple times, but that shared behavior does not distinguish them."
+    }
+  },
+  {
+    "query": "query-20",
+    "case": {
+      "source_index": 20,
+      "question": "What is the average amount of money transfers associated with phone numbers provided by 'Interstate Mob', and what is the total number of such transfers?",
+      "reference_query": "MATCH (mt:MoneyTransfer)-[r:WITH]->(pn:PhoneNumber {provider: 'Interstate Mob'}) WITH AVG(mt.amount) AS averageAmount, COUNT(mt) AS totalTransfers RETURN averageAmount, totalTransfers",
+      "initial_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE p.provider = 'Interstate Mob'\nRETURN avg(mt.amount) AS averageAmount, count(mt) AS totalTransfers",
+      "initial_status": "compiled",
+      "final_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE p.provider = 'Interstate Mob'\nRETURN avg(mt.amount) AS averageAmount, count(mt) AS totalTransfers",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries match MoneyTransfer -[:WITH]-> PhoneNumber and select the identical row set; the property-map predicate {provider:'Interstate Mob'} is semantically identical to the WHERE equality (both use = with the same non-null literal), and both compute single-group aggregations avg(amount) and count(mt) with no grouping keys, so both return exactly one row (including the (null, 0) row for empty input). The extra WITH block in the reference is a no-op, and count(mt) on a node variable is identical to counting rows since mt can never be NULL."
+    }
+  },
+  {
+    "query": "query-21",
+    "case": {
+      "source_index": 21,
+      "question": "For each AccountHolder, what is the average balance of their BankAccounts and the total number of BankAccounts they possess?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount) WITH ah, AVG(ba.balance) AS averageBalance, COUNT(ba) AS totalAccounts RETURN ah.fullName, averageBalance, totalAccounts",
+      "initial_query": "MATCH (a:AccountHolder)\nOPTIONAL MATCH (a)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nRETURN a.UniqueId AS accountHolderUniqueId, a.fullName AS accountHolderFullName, avg(b.balance) AS averageBankAccountBalance, count(DISTINCT b) AS totalBankAccounts",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nRETURN a.UniqueId AS accountHolderUniqueId, a.fullName AS accountHolderFullName, avg(b.balance) AS averageBankAccountBalance, count(DISTINCT b) AS totalBankAccounts",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "uncertain",
+      "reason": "Both aggregate over the same (AccountHolder)-[:HAS_BANKACCOUNT]->(BankAccount) pattern, but the candidate's implicit grouping key is (a.UniqueId, a.fullName) rather than the AccountHolder node itself. The schema declares UniqueId only as STRING with no uniqueness or non-NULL guarantee, so two AccountHolder nodes sharing a UniqueId (or both having it missing/NULL) would be collapsed into a single output row with avg/count pooled across both holders, whereas the reference (grouping by the node) returns separate rows; correctness therefore depends on an assumption not established by the schema. count(DISTINCT b) vs COUNT(ba) only diverges if parallel HAS_BANKACCOUNT relationships of the same type/direction exist between the same node pair (permitted in Neo4j), in which case the reference would double-count rows and skew AVG as well; the extra UniqueId output column is otherwise a harmless presentation difference."
+    }
+  },
+  {
+    "query": "query-22",
+    "case": {
+      "source_index": 22,
+      "question": "What is the average and maximum purchase amount made by purchases delivered to addresses in 'Ohio'?",
+      "reference_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(da:DeliveryAddress {state: 'Ohio'}) WITH AVG(p.amount) AS averageAmount, MAX(p.amount) AS maximumAmount RETURN averageAmount, maximumAmount",
+      "initial_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Ohio' RETURN avg(p.amount) AS averageAmount, max(p.amount) AS maximumAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:DELIVERED_AT]->(d:DeliveryAddress) WHERE d.state = 'Ohio' RETURN avg(p.amount) AS averageAmount, max(p.amount) AS maximumAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same pattern (Purchase)-[:DELIVERED_AT]->(DeliveryAddress) with an exact state = 'Ohio' filter and perform a single global aggregation with no grouping keys, so avg/max are computed over the identical row set (NULL amounts skipped in both); the WITH in the reference is just a pass-through projection."
+    }
+  },
+  {
+    "query": "query-23",
+    "case": {
+      "source_index": 23,
+      "question": "For each FinancialInstitute, what is the average balance of the BankAccounts associated with them, and what is the total number of BankAccounts associated with them?",
+      "reference_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount) WITH fi, AVG(ba.balance) AS averageBalance, COUNT(ba) AS totalAccounts RETURN fi.name, averageBalance, totalAccounts",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nRETURN fi.name AS financialInstitute, avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts\nORDER BY financialInstitute",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nRETURN fi.name AS financialInstitute, avg(b.balance) AS averageBalance, count(b) AS totalBankAccounts\nORDER BY financialInstitute",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "Only semantic difference is the grouping key: the reference groups by the FinancialInstitute node, the candidate groups by fi.name. If two distinct FinancialInstitute nodes share a name (schema declares no uniqueness on name), the reference returns two rows with separate AVG/COUNT while the candidate merges them into a single averaged/aggregated row, changing both values and row count. Otherwise (inner MATCH on FROM, count(b) vs COUNT(ba), ORDER BY without LIMIT) they agree; correctness of the candidate depends on the unstated assumption that fi.name is unique."
+    }
+  },
+  {
+    "query": "query-24",
+    "case": {
+      "source_index": 24,
+      "question": "What is the average balance of CreditCards held by AccountHolders, and what is the total number of CreditCards linked to these AccountHolders?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard) WITH AVG(cc.balance) AS averageBalance, COUNT(cc) AS totalCreditCards RETURN averageBalance, totalCreditCards",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard) RETURN avg(c.balance) AS averageBalance, count(DISTINCT c) AS totalCreditCards",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard) WITH DISTINCT c RETURN avg(c.balance) AS averageBalance, count(c) AS totalCreditCards",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The only difference is WITH DISTINCT c before aggregating, which collapses CreditCards reachable from multiple AccountHolders. The schema declares HAS_CREDITCARD as many-to-many with no uniqueness guarantee, so a card linked to two holders yields reference total=2 and its balance weighted twice in AVG, versus total=1 and single weighting for the candidate. If no card is shared the queries agree; since the question ('total number of CreditCards linked to these AccountHolders') does not establish whether holder-card pairs or distinct cards are meant, correctness cannot be confirmed from the given information."
+    }
+  },
+  {
+    "query": "query-25",
+    "case": {
+      "source_index": 25,
+      "question": "What is the average balance of BankAccounts that are associated with FinancialInstitutes whose website contains 'com'?",
+      "reference_query": "MATCH (ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.website CONTAINS 'com' WITH ba.balance AS balance RETURN avg(balance) AS AverageBalance",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute) WHERE f.website CONTAINS 'com' RETURN avg(b.balance)",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute) WHERE f.website CONTAINS 'com' RETURN avg(b.balance)",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the identical pattern (BankAccount)-[:FROM]->(FinancialInstitute) with the same CONTAINS 'com' filter on fi.website and aggregate avg over b.balance across the same row set; the only differences are variable names and the omitted output alias, which are presentational. Row multiplicity from a BankAccount linked to multiple matching institutes is handled identically in both."
+    }
+  },
+  {
+    "query": "query-26",
+    "case": {
+      "source_index": 26,
+      "question": "What is the average amount of money transferred through MoneyTransfers that used phone numbers from the provider 'B Tee'?",
+      "reference_query": "MATCH (mt:MoneyTransfer)-[:WITH]->(pn:PhoneNumber) WHERE pn.provider = 'B Tee' WITH mt.amount AS transferAmount RETURN avg(transferAmount) AS AverageTransferAmount",
+      "initial_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber {provider: 'B Tee'}) RETURN avg(t.amount) AS averageAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (t:MoneyTransfer)-[:WITH]->(p:PhoneNumber {provider: 'B Tee'}) RETURN avg(t.amount) AS averageAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries traverse (MoneyTransfer)-[:WITH]->(PhoneNumber), restrict to provider = 'B Tee' (inline property map vs WHERE clause is semantically identical), and aggregate avg over mt.amount, returning one row (NULL if no matching transfers). Any per-transfer row multiplication from multiple 'B Tee' phone numbers affects both identically."
+    }
+  },
+  {
+    "query": "query-27",
+    "case": {
+      "source_index": 27,
+      "question": "What is the average balance of CreditCards held by AccountHolders born after 1975?",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE ah.birthDate > '1975-01-01' WITH cc.balance AS creditCardBalance RETURN avg(creditCardBalance) AS AverageCreditCardBalance",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate >= '1976'\nRETURN avg(c.balance) AS averageBalance",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE a.birthDate >= '1976'\nRETURN avg(c.balance) AS averageBalance",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Both aggregate avg(c.balance) over all credit cards of matching holders (same grain, same NULL-skipping by avg). The candidate's filter birthDate >= '1976' selects holders born in 1976 or later, which matches the natural reading of 'born after 1975'. The reference's birthDate > '1975-01-01' additionally includes holders born during 1975 (e.g. birthDate '1975-06-15' satisfies > '1975-01-01' but fails >= '1976'), so the two queries can return different averages; hence not equivalent, while the candidate is a faithful (ISO/YYYY-prefixed string comparison) implementation of the question."
+    }
+  },
+  {
+    "query": "query-28",
+    "case": {
+      "source_index": 28,
+      "question": "What is the average loan amount of UnsecuredLoans held by Flagged individuals with last name 'Pelyo'?",
+      "reference_query": "MATCH (f:Flagged)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) WHERE f.lastName = 'Pelyo' WITH ul.loanAmount AS loanAmount RETURN avg(loanAmount) AS AverageLoanAmount",
+      "initial_query": "MATCH (f:Flagged {lastName: 'Pelyo'})-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nRETURN avg(l.loanAmount) AS averageLoanAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (f:Flagged {lastName: 'Pelyo'})-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nRETURN avg(l.loanAmount) AS averageLoanAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries match (f:Flagged)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) restricted to lastName 'Pelyo' and return avg(ul.loanAmount) over the same row set at the same grain. The inline property pattern {lastName: 'Pelyo'} is exactly equivalent to WHERE f.lastName = 'Pelyo' (missing property yields null and is excluded in both cases), and both rely on avg's identical NULL-skipping behavior and return NULL when no matching loans exist. The reference's WITH ... AS loanAmount projection changes nothing semantically."
+    }
+  },
+  {
+    "query": "query-29",
+    "case": {
+      "source_index": 29,
+      "question": "Find all AccountHolders who have both a BankAccount with a balance greater than 7000 and a CreditCard with a limit greater than 50000, and return their full names.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount) \nWHERE ba.balance > 7000\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.limit > 50000\nRETURN ah.fullName",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)\nWHERE ba.balance > 7000\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.limit > 50000\nRETURN DISTINCT ah.fullName AS fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)\nWHERE ba.balance > 7000\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.limit > 50000\nRETURN DISTINCT ah.fullName AS fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate uses the same two MATCH patterns (AccountHolder-[:HAS_BANKACCOUNT]->BankAccount with balance > 7000, then AccountHolder-[:HAS_CREDITCARD]->CreditCard with limit > 50000) and returns ah.fullName, so the requested name set is unchanged; adding DISTINCT only removes duplicate rows arising from holders with several qualifying accounts/cards, which the question does not ask for. That same DISTINCT is the concrete difference from the reference: with an AccountHolder having two BankAccounts above 7000 (or two CreditCards above 50000), the reference emits one row per matching path while the candidate emits a single row, and it also merges two distinct AccountHolders sharing an identical (non-unique per schema) fullName."
+    }
+  },
+  {
+    "query": "query-30",
+    "case": {
+      "source_index": 30,
+      "question": "Retrieve the names of FinancialInstitutes that have at least two BankAccounts with balances exceeding 8000, and list the account numbers associated with those accounts.",
+      "reference_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount)\nWHERE ba.balance > 8000\nWITH fi, COLLECT(ba.accountNumber) AS accountNumbers, count(ba) AS accountCount\nWHERE accountCount >= 2\nRETURN fi.name, accountNumbers",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 8000\nWITH f, collect(b.accountNumber) AS accountNumbers\nWHERE size(accountNumbers) >= 2\nRETURN f.name AS financialInstitute, accountNumbers",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 8000\nWITH f, collect(b.accountNumber) AS accountNumbers\nWHERE size(accountNumbers) >= 2\nRETURN f.name AS financialInstitute, accountNumbers",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Same pattern and direction (BankAccount)-[:FROM]->(FinancialInstitute), same pre-aggregation filter balance > 8000, same grouping key (institute) and same threshold: size(collect(accountNumber)) >= 2 matches count(ba) >= 2 per institute, returning fi.name plus the same collected account-number list; only variable names/alias differ. (The two aggregation arguments would diverge only if an account with balance > 8000 had a NULL accountNumber, since collect() skips nulls while count() does not, but nothing in the schema indicates such missing values.)"
+    }
+  },
+  {
+    "query": "query-31",
+    "case": {
+      "source_index": 31,
+      "question": "Find the AccountHolders who have made purchases from shops with the business type 'expedite compelling paradigms' and have a credit card with late payments greater than 0. Return the full name of the AccountHolder and the amount of the purchase.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.latePayments > 0\nMATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nWHERE s.business = 'expedite compelling paradigms'\nMATCH (p)-[:WITH_CARD]->(card:BankCard)\nWITH ah, p\nRETURN ah.fullName, p.amount",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop) WHERE cc.latePayments > 0 AND s.business = 'expedite compelling paradigms' AND l.firstName = a.firstName AND l.lastName = a.lastName RETURN a.fullName AS accountHolderFullName, p.amount AS purchaseAmount",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard), (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop) WHERE cc.latePayments > 0 AND s.business = 'expedite compelling paradigms' AND l.firstName = a.firstName AND l.lastName = a.lastName RETURN a.fullName AS accountHolderFullName, p.amount AS purchaseAmount",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The schema has no relationship path connecting AccountHolder to Purchase; the candidate links them only via l.firstName=a.firstName AND l.lastName=a.lastName, an assumption not established by the schema (name collisions could yield false matches, name variations false misses). The reference performs no linking at all, producing a cross product of (account holders with a late-payment credit card) × (expedite-shop purchases with a BankCard), so the two queries yield different result sets and multiplicities."
+    }
+  },
+  {
+    "query": "query-32",
+    "case": {
+      "source_index": 32,
+      "question": "What are the names of the states where an IP address used for a purchase with amount greater than 4000 is located?",
+      "reference_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nWHERE p.amount > 4000\nRETURN DISTINCT s.name",
+      "initial_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nWHERE p.amount > 4000\nRETURN DISTINCT s.name AS stateName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State)\nWHERE p.amount > 4000\nRETURN DISTINCT s.name AS stateName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The candidate uses the same pattern (Purchase)-[:FROM_IP]->(IP)-[:LOCATED_IN]->(State), the same exact filter p.amount > 4000, and the same DISTINCT aggregation grain (one row per state name). The only difference is the output alias 'stateName', which does not affect the requested result set of state names."
+    }
+  },
+  {
+    "query": "query-33",
+    "case": {
+      "source_index": 33,
+      "question": "Find AccountHolders whose birth date is '1956-06-21' and have a PhoneNumber provided by 'B Tee'. Return the full name of those AccountHolders.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(pn:PhoneNumber)\nWHERE ah.birthDate = '1956-06-21' AND pn.provider = 'B Tee'\nRETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE a.birthDate = '1956-06-21' AND p.provider = 'B Tee' RETURN a.fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The candidate is identical to the reference up to variable renaming: same MATCH pattern (AccountHolder)-[:HAS_PHONENUMBER]->(PhoneNumber), same exact equality filters on ah.birthDate = '1956-06-21' and pn.provider = 'B Tee', and same returned column ah.fullName. Schema confirms birthDate and provider are STRING properties on AccountHolder and PhoneNumber respectively, and HAS_PHONENUMBER from AccountHolder to PhoneNumber exists. Neither query uses DISTINCT, so both would emit one row per matching B Tee phone number; since this behavior is shared, no semantic divergence exists."
+    }
+  },
+  {
+    "query": "query-34",
+    "case": {
+      "source_index": 34,
+      "question": "Find all AccountHolders who have both a BankAccount at 'Padberg and Sons' and a CreditCard with a balance greater than 3000.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute {name: 'Padberg and Sons'}) WITH ah MATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE cc.balance > 3000 RETURN ah",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Padberg and Sons'\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.balance > 3000\nRETURN ah",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Padberg and Sons'\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE cc.balance > 3000\nRETURN ah",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries bind the same ah that simultaneously satisfies (ah)-[:HAS_BANKACCOUNT]->(:BankAccount)-[:FROM]->(fi) with fi.name exactly 'Padberg and Sons' and (ah)-[:HAS_CREDITCARD]->(cc) with cc.balance > 3000; the inline property map {name: 'Padberg and Sons'} is equality with identical NULL-excluding semantics as WHERE fi.name = ..., and the intermediate WITH ah only collapses duplicate bank-account rows without changing the set of returned AccountHolders (the reference itself does not deduplicate credit-card multiplicity, so neither query is DISTINCT-based; only raw duplicate-row counts could differ when an account holder has multiple matching bank accounts, which does not alter which AccountHolders are found)."
+    }
+  },
+  {
+    "query": "query-35",
+    "case": {
+      "source_index": 35,
+      "question": "Retrieve the names of all Shops for which a Login with the first name 'Marchelle' has made a Purchase with an amount greater than 4000 on the date '2018-02-07'.",
+      "reference_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login {firstName: 'Marchelle'})<-[:WITH_LOGIN]-(p:Purchase {date: '2018-02-07'}) WHERE p.amount > 4000 RETURN s.name",
+      "initial_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login {firstName: 'Marchelle'})-[:FOR_SHOP]->(s:Shop)\nWHERE p.amount > 4000 AND p.date = '2018-02-07'\nRETURN DISTINCT s.name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login {firstName: 'Marchelle'})-[:FOR_SHOP]->(s:Shop)\nWHERE p.amount > 4000 AND p.date = '2018-02-07'\nRETURN DISTINCT s.name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Patterns, directions and filters match exactly: (p:Purchase)-[:WITH_LOGIN]->(l:Login {firstName:'Marchelle'})-[:FOR_SHOP]->(s:Shop) is the same path as the reference, p.amount > 4000 is identical, and p.date = '2018-02-07' is exact STRING equality, equivalent to the reference's {date:'2018-02-07'} property match. The only difference is the added DISTINCT on s.name; since Shop.name is not guaranteed unique, the reference can emit the same name on multiple rows while the candidate emits it once, but the requested set of shop names is unchanged, so this is a duplicate-collapsing, not a semantic, difference."
+    }
+  },
+  {
+    "query": "query-36",
+    "case": {
+      "source_index": 36,
+      "question": "Find AccountHolders who have a PhoneNumber provided by 'KPA Tel' and an UnsecuredLoan with a loan amount greater than 5000.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(pn:PhoneNumber {provider: 'KPA Tel'}) WITH ah MATCH (ah)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) WHERE ul.loanAmount > 5000 RETURN ah",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'KPA Tel'}), (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE u.loanAmount > 5000 RETURN DISTINCT a.UniqueId AS UniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName, u.accountNumber AS accountNumber, u.loanAmount AS loanAmount ORDER BY loanAmount DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'KPA Tel'}), (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE u.loanAmount > 5000 RETURN DISTINCT a.UniqueId AS UniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName, u.accountNumber AS accountNumber, u.loanAmount AS loanAmount ORDER BY loanAmount DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The predicate is the same (same holder must have a 'KPA Tel' PhoneNumber and an UnsecuredLoan with loanAmount > 5000), but the output grain differs: the candidate groups by (UniqueId, names, u.accountNumber, u.loanAmount), so an AccountHolder with two qualifying loans (e.g. 6000 and 9000) is returned twice as distinct rows, whereas the question asks for the AccountHolders. DISTINCT here cannot collapse holders because loan properties are in the projection, and returning per-loan rows makes the result differ from the reference's per-AccountHolder output."
+    }
+  },
+  {
+    "query": "query-37",
+    "case": {
+      "source_index": 37,
+      "question": "What are the account numbers of BankAccounts that sent MoneyTransfers with an amount greater than 900 on '2018-02-07'?",
+      "reference_query": "MATCH (ba:BankAccount)-[:SEND]->(mt:MoneyTransfer {transactionDate: '2018-02-07'}) WHERE mt.amount > 900 RETURN ba.accountNumber",
+      "initial_query": "MATCH (b:BankAccount)-[:SEND]->(t:MoneyTransfer)\nWHERE t.amount > 900 AND t.transactionDate = '2018-02-07'\nRETURN DISTINCT b.accountNumber",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:SEND]->(t:MoneyTransfer)\nWHERE t.amount > 900 AND t.transactionDate = '2018-02-07'\nRETURN DISTINCT b.accountNumber",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Candidate uses the correct direction (BankAccount)-[:SEND]->(MoneyTransfer) matching the schema's BankAccount->SEND->MoneyTransfer, an exact equality filter on transactionDate = '2018-02-07', and amount > 900 (strict), so it correctly answers the question. The only semantic difference from the reference is the added DISTINCT: if a single BankAccount sent multiple qualifying MoneyTransfers, the reference returns that accountNumber once per matching transfer (duplicates) while the candidate returns it once, so the two are not equivalent in row multiplicity."
+    }
+  },
+  {
+    "query": "query-38",
+    "case": {
+      "source_index": 38,
+      "question": "Find the names of all AccountHolders who have an Address in 'Wisconsin' and an SSN that starts with '044'.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address {state: 'Wisconsin'}) WITH ah MATCH (ah)-[:HAS_SSN]->(s:SSN) WHERE s.ssn STARTS WITH '044' RETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(ad:Address), (a)-[:HAS_SSN]->(s:SSN)\nWHERE ad.state = 'Wisconsin' AND s.ssn STARTS WITH '044'\nRETURN DISTINCT a.fullName AS name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(ad:Address), (a)-[:HAS_SSN]->(s:SSN)\nWHERE ad.state = 'Wisconsin' AND s.ssn STARTS WITH '044'\nRETURN DISTINCT a.fullName AS name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both anchor on AccountHolder, require HAS_ADDRESS to an Address with state exactly 'Wisconsin' and HAS_SSN to an SSN whose ssn STARTS WITH '044', and return the holder's fullName; the comma-separated patterns are just a restructured conjunction of the same two MATCH clauses. The only differences are the added DISTINCT and the alias 'name'. Since the question asks for the names, DISTINCT can only collapse rows with identical fullName values (e.g. a holder with multiple Wisconsin addresses, or two holders sharing a name), which does not change which names satisfy the conditions; no LIMIT/ordering is involved."
+    }
+  },
+  {
+    "query": "query-39",
+    "case": {
+      "source_index": 39,
+      "question": "Find the names of AccountHolders who have both a BankAccount and a CreditCard with a balance exceeding $1000 and order the results by the AccountHolders' last names.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount) WHERE ba.balance > 1000 MATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE cc.balance > 1000 RETURN ah.firstName, ah.lastName ORDER BY ah.lastName",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 1000 AND cc.balance > 1000\nWITH DISTINCT ah\nRETURN ah.fullName AS name\nORDER BY ah.lastName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 1000 AND cc.balance > 1000\nWITH DISTINCT ah\nRETURN ah.fullName AS name\nORDER BY ah.lastName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The MATCH/WHERE join semantics for qualifying holders are equivalent, but the output differs materially. The reference returns two columns ah.firstName, ah.lastName, while the candidate returns a single ah.fullName column. fullName is a separate, not-guaranteed-non-NULL STRING property in the schema; if it is NULL or formatted differently from firstName/lastName, the candidate returns a NULL/mismatched name for a qualifying holder, so its correctness depends on the unestablished assumption that fullName is populated and equals the name. Additionally, the candidate applies WITH DISTINCT ah (one row per holder), whereas the reference emits one row per matching BankAccount×CreditCard pair (possible duplicates), a concrete multiplicity counterexample. Both differences make the queries non-equivalent."
+    }
+  },
+  {
+    "query": "query-40",
+    "case": {
+      "source_index": 40,
+      "question": "Retrieve the names of shops for which there exists at least one purchase made from an IP address located in 'Arkansas'.",
+      "reference_query": "MATCH (p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(s:State {name: 'Arkansas'}) MATCH (p)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(shop:Shop) RETURN DISTINCT shop.name",
+      "initial_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(st:State {name: 'Arkansas'})\nRETURN DISTINCT s.name AS shopName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:FROM_IP]->(ip:IP)-[:LOCATED_IN]->(st:State {name: 'Arkansas'})\nRETURN DISTINCT s.name AS shopName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "The candidate is the same conjunctive pattern as the reference, only written as one path with explicit directions: (Shop)<-[:FOR_SHOP]-(Login)<-[:WITH_LOGIN]-(Purchase)-[:FROM_IP]->(IP)-[:LOCATED_IN]->(State {name:'Arkansas'}), with exact equality on state name and RETURN DISTINCT s.name. Since p is bound by the same anchor pattern in both, the reference's separate MATCH acts as an inner join on the same purchase, so both return the identical distinct set of shop names for purchases originating from Arkansas IPs, with no extra grouping keys, filters, or NULL-affecting clauses."
+    }
+  },
+  {
+    "query": "query-41",
+    "case": {
+      "source_index": 41,
+      "question": "List the full names of AccountHolders who have a PhoneNumber provided by 'Yellow Mobile' and an UnsecuredLoan with an APR greater than 0.19.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(pn:PhoneNumber {provider: 'Yellow Mobile'}) MATCH (ah)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) WHERE toFloat(ul.APR) > 0.19 RETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE p.provider = 'Yellow Mobile' MATCH (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE toFloat(u.APR) > 0.19 RETURN DISTINCT a.fullName AS fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber) WHERE p.provider = 'Yellow Mobile' MATCH (a)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan) WHERE toFloat(u.APR) > 0.19 RETURN DISTINCT a.fullName AS fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same patterns and filters: (AccountHolder)-[:HAS_PHONENUMBER]->(PhoneNumber) with provider restricted to exactly 'Yellow Mobile' (an inline property map is equivalent to the candidate's WHERE on p.provider), then (AccountHolder)-[:HAS_UNSECUREDLOAN]->(UnsecuredLoan) with toFloat(APR) > 0.19 on the same STRING cast, and both project ah.fullName. The only difference is the candidate's DISTINCT. Since the request is a list of full names, not per-(holder, phone, loan) rows, DISTINCT only collapses exact duplicate name rows arising from multiple 'Yellow Mobile' phones or multiple qualifying loans, which does not change the set of names returned; NULL fullName values are preserved by DISTINCT just as they are without it, and the cast/filter semantics (including any invalid-APR handling) are identical in both."
+    }
+  },
+  {
+    "query": "query-42",
+    "case": {
+      "source_index": 42,
+      "question": "Find the names of FinancialInstitutes that have received MoneyTransfers where the amount is greater than $500, and the money transfer was made with a PhoneNumber from 'B Tee'.",
+      "reference_query": "MATCH (mt:MoneyTransfer {amount: 906.83})-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) MATCH (mt)-[:WITH]->(pn:PhoneNumber {provider: 'B Tee'}) RETURN DISTINCT fi.name",
+      "initial_query": "MATCH (mt:MoneyTransfer)-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)-[:FROM]<-[:SEND]-(mt:MoneyTransfer)\nMATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE mt.amount > 500 AND p.provider = 'B Tee'\nRETURN DISTINCT fi.name",
+      "initial_status": "parse_failed",
+      "final_query": "MATCH (mt:MoneyTransfer)-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nMATCH (mt:MoneyTransfer)-[:WITH]->(p:PhoneNumber)\nWHERE mt.amount > 500 AND p.provider = 'B Tee'\nRETURN DISTINCT fi.name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate matches the schema exactly: (mt:MoneyTransfer)-[:SEND]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) plus (mt)-[:WITH]->(p:PhoneNumber), filters amount > 500 and p.provider = 'B Tee', and returns DISTINCT fi.name, which is precisely what the question asks. The reference instead pins the transfer to the single value {amount: 906.83}, so it is strictly narrower than the question's amount > 500 and would miss qualifying transfers (e.g., amount 700.0 with provider 'B Tee'), making the two queries non-equivalent."
+    }
+  },
+  {
+    "query": "query-43",
+    "case": {
+      "source_index": 43,
+      "question": "Retrieve the full names of Flagged entities who share the same Address as AccountHolder 'Jorge Girod'.",
+      "reference_query": "MATCH (ah:AccountHolder {fullName: 'Jorge Girod'})-[:HAS_ADDRESS]->(addr:Address) MATCH (f:Flagged)-[:HAS_ADDRESS]->(addr) RETURN f.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nWHERE a.fullName = 'Jorge Girod' OR (a.firstName = 'Jorge' AND a.lastName = 'Girod')\nMATCH (f:Flagged)-[:HAS_ADDRESS]->(addr)\nRETURN DISTINCT f.fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_ADDRESS]->(addr:Address)\nWHERE a.fullName = 'Jorge Girod' OR (a.firstName = 'Jorge' AND a.lastName = 'Girod')\nMATCH (f:Flagged)-[:HAS_ADDRESS]->(addr)\nRETURN DISTINCT f.fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate broadens the AccountHolder selection with `WHERE a.fullName = 'Jorge Girod' OR (a.firstName = 'Jorge' AND a.lastName = 'Girod')`, whereas the question and reference require the exact fullName 'Jorge Girod'. If another AccountHolder has firstName='Jorge' and lastName='Girod' but a different (or NULL) fullName and a different Address, that person's addresses are added to the addr set, causing extra Flagged entities (who share those other addresses) to be returned. This produces extra/incorrect results relative to the exact-match requirement."
+    }
+  },
+  {
+    "query": "query-44",
+    "case": {
+      "source_index": 44,
+      "question": "Find the names of account holders who have both a bank account and an unsecured loan, and also have a credit card with a balance greater than $300.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE cc.balance > 300 RETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(:BankAccount)\nMATCH (a)-[:HAS_UNSECUREDLOAN]->(:UnsecuredLoan)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 300.0\nRETURN DISTINCT a.firstName, a.lastName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(:BankAccount)\nMATCH (a)-[:HAS_UNSECUREDLOAN]->(:UnsecuredLoan)\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 300.0\nRETURN DISTINCT a.firstName, a.lastName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The pattern/filter logic (bank account AND unsecured loan AND credit card with balance > 300) matches the reference, but the projection differs semantically: it returns two separate columns a.firstName, a.lastName instead of the single name value, and the schema does not guarantee those properties are populated (AccountHolder also carries fullName), so rows with NULL/partial names can be returned where the reference yields a name. Additionally, DISTINCT collapses the duplicate name rows the reference produces when a holder has multiple qualifying credit cards/bank accounts, changing row multiplicity."
+    }
+  },
+  {
+    "query": "query-45",
+    "case": {
+      "source_index": 45,
+      "question": "Retrieve the names of financial institutes that have at least two bank accounts associated with money transfers exceeding $850.",
+      "reference_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount)-[:SEND]->(mt:MoneyTransfer) WHERE mt.amount > 850 WITH fi, COUNT(DISTINCT ba) AS accountCount WHERE accountCount >= 2 RETURN fi.name",
+      "initial_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount)-[:SEND]->(mt:MoneyTransfer)\nWHERE mt.amount > 850\nWITH fi, count(DISTINCT ba) AS accountCount\nWHERE accountCount >= 2\nRETURN DISTINCT fi.name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount)-[:SEND]->(mt:MoneyTransfer)\nWHERE mt.amount > 850\nWITH fi, count(DISTINCT ba) AS accountCount\nWHERE accountCount >= 2\nRETURN DISTINCT fi.name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Matching, filter (mt.amount > 850), and aggregation grain (GROUP BY fi node, COUNT(DISTINCT ba) >= 2) are identical, so the same set of qualifying institutes is selected. The only difference is the trailing DISTINCT on fi.name: since the schema declares no uniqueness on FinancialInstitute.name, two distinct institute nodes sharing a name each with two qualifying accounts yield ['X','X'] for the reference but ['X'] here, so the row multisets differ, though the answer to the question (which names qualify) is unchanged."
+    }
+  },
+  {
+    "query": "query-46",
+    "case": {
+      "source_index": 46,
+      "question": "Find the names of account holders who have a phone number from 'B Tee' and also have a credit card with an expiration date of '06-16'.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(pn:PhoneNumber {provider: 'B Tee'}), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard {expirationDate: '06-16'}) RETURN ah.fullName",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'B Tee'})\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard {expirationDate: '06-16'})\nRETURN DISTINCT ah.firstName, ah.lastName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber {provider: 'B Tee'})\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard {expirationDate: '06-16'})\nRETURN DISTINCT ah.firstName, ah.lastName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The MATCH patterns agree, but the projection differs semantically. The reference returns the single property ah.fullName per matching path; the candidate returns two separate columns (firstName, lastName) under DISTINCT. Nothing in the schema guarantees fullName equals firstName + lastName or that firstName/lastName are non-NULL: a holder with fullName 'John Q. Smith' and another with 'John R. Smith' both having firstName 'John'/lastName 'Smith' collapse to one DISTINCT row, losing a holder the reference reports; conversely a holder with populated fullName but NULL firstName/lastName yields (null, null) instead of the name. DISTINCT also changes row multiplicity relative to the reference."
+    }
+  },
+  {
+    "query": "query-47",
+    "case": {
+      "source_index": 47,
+      "question": "Identify the shop names for which there are logins created after '19891020' and before '19891025', and the logins have the last name 'Centanni'.",
+      "reference_query": "MATCH (l:Login {lastName: 'Centanni'})-[:FOR_SHOP]->(s:Shop) WHERE l.startDate > 19891020 AND l.startDate < 19891025 RETURN s.name",
+      "initial_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.startDate > 19891020 AND l.startDate < 19891025 AND l.lastName = 'Centanni' RETURN DISTINCT s.name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.startDate > 19891020 AND l.startDate < 19891025 AND l.lastName = 'Centanni' RETURN DISTINCT s.name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both match Login->[:FOR_SHOP]->Shop with the same strict numeric startDate range (19891020 < startDate < 19891025) and the same lastName 'Centanni' constraint (inline property vs. equality predicate are identical filters). The only difference is the added DISTINCT, which merely collapses duplicate shop rows for a question asking to identify the shop names — same shop set, no change in requested semantics."
+    }
+  },
+  {
+    "query": "query-48",
+    "case": {
+      "source_index": 48,
+      "question": "Find the full names of account holders who have an address in 'West Virginia' and also have an unsecured loan with a loan amount greater than $9000.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address {state: 'West Virginia'}), (ah)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) WHERE ul.loanAmount > 9000 RETURN ah.fullName",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address), (ah)-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nWHERE a.state = 'West Virginia' AND l.loanAmount > 9000\nRETURN DISTINCT ah.fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address), (ah)-[:HAS_UNSECUREDLOAN]->(l:UnsecuredLoan)\nWHERE a.state = 'West Virginia' AND l.loanAmount > 9000\nRETURN DISTINCT ah.fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Same patterns, relationship types/directions, and filters (a.state = 'West Virginia' exact match, l.loanAmount > 9000) on schema-valid properties (Address.state, UnsecuredLoan.loanAmount FLOAT, AccountHolder.fullName). The only difference is DISTINCT: it can reduce duplicate rows when a holder has multiple WV addresses or multiple qualifying loans, and collapses two distinct holders sharing the same fullName, but the projected set of full names — the requested answer — is identical."
+    }
+  },
+  {
+    "query": "query-49",
+    "case": {
+      "source_index": 49,
+      "question": "Find all AccountHolders who have both a BankAccount and a CreditCard with a balance greater than 4000.0.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount) WHERE ba.balance > 4000.0 WITH ah MATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE cc.balance > 4000.0 RETURN ah",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 4000.0 AND cc.balance > 4000.0\nRETURN DISTINCT ah",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount), (ah)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE ba.balance > 4000.0 AND cc.balance > 4000.0\nRETURN DISTINCT ah",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate conjoins both patterns and applies each filter to its own relationship in the same row, which correctly expresses 'has a BankAccount with balance > 4000 AND has a CreditCard with balance > 4000' for the same AccountHolder; DISTINCT collapses the cartesian rows back to one row per holder, matching the set-of-holders asked for. The reference deduplicates holders at `WITH ah` (removing bank-account multiplicity) but then re-multiplies per qualifying CreditCard and returns `ah` without DISTINCT, so a holder with one qualifying BankAccount and two qualifying CreditCards yields two identical rows in the reference versus one in the candidate."
+    }
+  },
+  {
+    "query": "query-50",
+    "case": {
+      "source_index": 50,
+      "question": "Retrieve the names of Shops that have logins associated with purchases made using BankCards with a limit of 5000.0.",
+      "reference_query": "MATCH (s:Shop)-[:FOR_SHOP]-(l:Login)-[:WITH_LOGIN]-(p:Purchase)-[:WITH_CARD]-(bc:BankCard) WHERE bc.limit = 5000.0 RETURN DISTINCT s.name",
+      "initial_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:WITH_CARD]->(bc:BankCard) WHERE bc.limit = 5000.0 RETURN DISTINCT s.name AS name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (s:Shop)<-[:FOR_SHOP]-(l:Login)<-[:WITH_LOGIN]-(p:Purchase)-[:WITH_CARD]->(bc:BankCard) WHERE bc.limit = 5000.0 RETURN DISTINCT s.name AS name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Candidate directions match the schema exactly: (s)<-[:FOR_SHOP]-(l)<-[:WITH_LOGIN]-(p)-[:WITH_CARD]->(bc) is the only edge orientation declared (Login->FOR_SHOP->Shop, Purchase->WITH_LOGIN->Login, Purchase->WITH_CARD->BankCard), so the reference's undirected patterns cannot match extra paths. Same exact float filter bc.limit = 5000.0, same DISTINCT on s.name; the 'AS name' alias is presentation-only."
+    }
+  },
+  {
+    "query": "query-51",
+    "case": {
+      "source_index": 51,
+      "question": "Find AccountHolders who have an UnsecuredLoan with an APR greater than 0.35 and also have a PhoneNumber provided by 'Loud and Clear'.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_UNSECUREDLOAN]->(ul:UnsecuredLoan) WHERE toFloat(ul.APR) > 0.35 WITH ah MATCH (ah)-[:HAS_PHONENUMBER]->(pn:PhoneNumber) WHERE pn.provider = 'Loud and Clear' RETURN ah",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_PHONENUMBER]->(p:PhoneNumber)\nWHERE toFloat(u.APR) > 0.35 AND p.provider = 'Loud and Clear'\nRETURN DISTINCT a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName, a.UniqueId AS uniqueId, u.accountNumber AS loanAccountNumber, u.APR AS apr, p.phone AS phone\nORDER BY lastName, firstName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_UNSECUREDLOAN]->(u:UnsecuredLoan)\nMATCH (a)-[:HAS_PHONENUMBER]->(p:PhoneNumber)\nWHERE toFloat(u.APR) > 0.35 AND p.provider = 'Loud and Clear'\nRETURN DISTINCT a.UniqueId AS uniqueId, a.firstName AS firstName, a.lastName AS lastName, a.fullName AS fullName\nORDER BY lastName, firstName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "Topology, directions and filters are identical (HAS_UNSECUREDLOAN -> UnsecuredLoan with toFloat(APR) > 0.35, HAS_PHONENUMBER -> PhoneNumber with provider = 'Loud and Clear'), but the candidate returns only a projection (UniqueId, firstName, lastName, fullName) with DISTINCT instead of the AccountHolder node. Since the schema does not guarantee UniqueId is unique or non-NULL, two distinct AccountHolder nodes sharing those values (e.g. NULL UniqueId plus identical names) collapse into one row, and the candidate also drops holders whose extra properties (e.g. birthDate) the reference exposes; additionally multiplicity differs (reference emits one row per qualifying loan/phone path, e.g. 2 rows for a holder with two APR>0.35 loans, candidate emits 1). Correctness therefore rests on the unstated assumption that the four projected properties uniquely identify an AccountHolder."
+    }
+  },
+  {
+    "query": "query-52",
+    "case": {
+      "source_index": 52,
+      "question": "List all AccountHolders who have an Address in 'Washington' and a CreditCard with latePayments greater than 0.0.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address) WHERE a.state = 'Washington' WITH ah MATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) WHERE cc.latePayments > 0.0 RETURN ah",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address)-[:HAS_CREDITCARD]->(cc:CreditCard)\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE a.state = 'Washington' AND cc.latePayments > 0.0\nRETURN DISTINCT ah.fullName AS fullName, ah.birthDate AS birthDate\nORDER BY fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address)\nMATCH (ah:AccountHolder)-[:HAS_CREDITCARD]->(cc:CreditCard)\nWHERE a.state = 'Washington' AND cc.latePayments > 0.0\nRETURN DISTINCT ah.UniqueId AS UniqueId, ah.fullName AS fullName, ah.birthDate AS birthDate\nORDER BY UniqueId",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries traverse the same paths with the same exact filters: (ah:AccountHolder)-[:HAS_ADDRESS]->(a:Address) with a.state = 'Washington' and (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) with cc.latePayments > 0.0; combining both patterns in one MATCH with a conjunctive WHERE is logically the same as the reference's WITH-then-MATCH staging (no property/type/direction differences, exact equality on state, no NULL-excluding extras beyond what both share). The only differences are output shape and multiplicity: the candidate projects ah.UniqueId/fullName/birthDate instead of the whole node, applies DISTINCT, and orders by UniqueId. DISTINCT/ordering only removes the duplicate rows the reference would emit for a holder with multiple Washington addresses or multiple qualifying cards, which the question does not ask for, so the identified set of AccountHolders is unchanged. Caveat: this relies on UniqueId (with fullName/birthDate) identifying a holder; the schema declares no uniqueness constraint, so two distinct AccountHolder nodes sharing all three values would collapse into one row, and holders with all three NULL could likewise collapse."
+    }
+  },
+  {
+    "query": "query-53",
+    "case": {
+      "source_index": 53,
+      "question": "Identify AccountHolders whose BankAccount is associated with 'Dooley, Dooley and Dooley' and who have made purchases from shops with the business 'deliver wireless niches'.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute) WHERE fi.name = 'Dooley, Dooley and Dooley' WITH ah MATCH (ah)-[]->(p:Purchase)-[]-(l:Login)-[:FOR_SHOP]->(s:Shop) WHERE s.business = 'deliver wireless niches' RETURN DISTINCT ah",
+      "initial_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Dooley, Dooley and Dooley'\nMATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nWHERE s.business = 'deliver wireless niches'\nAND l.firstName = ah.firstName\nAND l.lastName = ah.lastName\nRETURN DISTINCT ah.fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount)-[:FROM]->(fi:FinancialInstitute)\nWHERE fi.name = 'Dooley, Dooley and Dooley'\nMATCH (p:Purchase)-[:WITH_LOGIN]->(l:Login)-[:FOR_SHOP]->(s:Shop)\nWHERE s.business = 'deliver wireless niches'\nAND l.firstName = ah.firstName\nAND l.lastName = ah.lastName\nRETURN DISTINCT ah.fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The schema has no AccountHolder→Purchase edge, so the candidate links purchases to holders only via l.firstName = ah.firstName AND l.lastName = ah.lastName. This name-equality join is an unstated assumption the schema does not guarantee (homonymous AccountHolders/Logins can produce false positives, and it also collapses distinct holders sharing a fullName under DISTINCT ah.fullName), so correctness cannot be established. The reference instead relies on a direct (ah)-[]->(p:Purchase) relationship that does not exist in the schema (matching nothing) and returns whole nodes rather than fullName, so the two can yield different results."
+    }
+  },
+  {
+    "query": "query-54",
+    "case": {
+      "source_index": 54,
+      "question": "Find all AccountHolders who have both a BankAccount with a balance greater than $3000 and a CreditCard with a balance greater than $3000, and return their full names.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_BANKACCOUNT]->(ba:BankAccount) \nWHERE ba.balance > 3000\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) \nWHERE cc.balance > 3000\nRETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nWITH a, b\nWHERE b.balance > 3000\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 3000\nRETURN DISTINCT a.fullName AS fullName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_BANKACCOUNT]->(b:BankAccount)\nWITH a, b\nWHERE b.balance > 3000\nMATCH (a)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE c.balance > 3000\nRETURN DISTINCT a.fullName AS fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate enforces the same conjunction on one AccountHolder: the WITH keeps `a` bound so the second MATCH requires a HAS_CREDITCARD edge from that same holder with balance > 3000, matching the question's 'both' semantics; the WITH/WHERE placement is logically identical to the reference's two WHERE clauses. The only difference is DISTINCT on the returned name: the reference can emit duplicate fullName rows when a holder has multiple qualifying bank accounts or credit cards (or when two holders share a fullName), so the queries differ in row multiplicity even though the candidate's deduplicated name set is a faithful answer to 'find all AccountHolders ... return their full names'."
+    }
+  },
+  {
+    "query": "query-55",
+    "case": {
+      "source_index": 55,
+      "question": "Retrieve the names of FinancialInstitutes that have at least two BankAccounts with a balance greater than $2000.",
+      "reference_query": "MATCH (fi:FinancialInstitute)<-[:FROM]-(ba:BankAccount) \nWHERE ba.balance > 2000\nWITH fi, count(ba) AS accountCount\nWHERE accountCount >= 2\nRETURN fi.name",
+      "initial_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 2000\nWITH f, count(b) AS qualifyingAccounts\nWHERE qualifyingAccounts >= 2\nRETURN f.name AS financialInstituteName\nORDER BY financialInstituteName",
+      "initial_status": "compiled",
+      "final_query": "MATCH (b:BankAccount)-[:FROM]->(f:FinancialInstitute)\nWHERE b.balance > 2000\nWITH f, count(b) AS qualifyingAccounts\nWHERE qualifyingAccounts >= 2\nRETURN f.name AS financialInstituteName\nORDER BY financialInstituteName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both queries use the same pattern (BankAccount)-[:FROM]-(FinancialInstitute) with ba.balance > 2000, group by the FinancialInstitute node, require count >= 2, and return one name per qualifying institute. The only differences are an ORDER BY on the returned alias and the output alias name, neither of which changes the result multiset; duplicate names for distinct institutes are preserved identically in both."
+    }
+  },
+  {
+    "query": "query-56",
+    "case": {
+      "source_index": 56,
+      "question": "Find AccountHolders who have a PhoneNumber provided by 'B Tee' and a CreditCard with latePayments greater than 0. Return the full name of those AccountHolders.",
+      "reference_query": "MATCH (ah:AccountHolder)-[:HAS_PHONENUMBER]->(pn:PhoneNumber) \nWHERE pn.provider = 'B Tee'\nMATCH (ah)-[:HAS_CREDITCARD]->(cc:CreditCard) \nWHERE cc.latePayments > 0\nRETURN ah.fullName",
+      "initial_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->() RETURN a.fullName\n\nWait—output only the final query:\n\nMATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber)-[:HAS_PHONENUMBER]->(l:UnsecuredLoan)\nMATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE p.provider = 'B Tee' AND c.latePayments > 0\nRETURN DISTINCT a.fullName",
+      "initial_status": "parse_failed",
+      "final_query": "MATCH (a:AccountHolder)-[:HAS_PHONENUMBER]->(p:PhoneNumber)\nMATCH (a:AccountHolder)-[:HAS_CREDITCARD]->(c:CreditCard)\nWHERE p.provider = 'B Tee' AND c.latePayments > 0\nRETURN DISTINCT a.fullName",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Both patterns are anchored on the same AccountHolder node and both filters are conjunctive with exact equality on pn.provider = 'B Tee' and cc.latePayments > 0, so the combined WHERE ... AND selects exactly the same holder/phone/card combinations as the reference's sequential MATCH+WHERE form (cross-product rows filtered by AND = join of separately filtered patterns). The only difference is the added DISTINCT, which collapses duplicate fullName rows produced when a holder has multiple 'B Tee' phones or multiple qualifying cards (or, in a theoretical case, two distinct holders sharing an identical fullName); this affects only row multiplicity of the projected name, not which AccountHolders are identified, which the question asks for."
+    }
+  },
+  {
+    "query": "query-57",
+    "case": {
+      "source_index": 57,
+      "question": "Identify the Shops for which at least two Logins have a 'acme.com' email address. Return the names of the shops.",
+      "reference_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop)\nWHERE l.mail CONTAINS 'acme.com'\nWITH s, count(l) AS loginCount\nWHERE loginCount >= 2\nRETURN s.name",
+      "initial_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.mail CONTAINS 'acme.com' WITH s, count(DISTINCT l) AS acmeLogins WHERE acmeLogins >= 2 RETURN s.name",
+      "initial_status": "compiled",
+      "final_query": "MATCH (l:Login)-[:FOR_SHOP]->(s:Shop) WHERE l.mail CONTAINS 'acme.com' WITH s, count(DISTINCT l) AS acmeLogins WHERE acmeLogins >= 2 RETURN s.name",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "equivalent",
+      "reason": "Same pattern (Login)-[:FOR_SHOP]->(Shop) with l.mail CONTAINS 'acme.com', grouped by shop, threshold >= 2, returning s.name. count(DISTINCT l) counts distinct Login nodes, which matches 'at least two Logins' at least as precisely as count(l); the two agree unless duplicate parallel FOR_SHOP edges exist between the same Login and Shop, which the schema does not establish (Login is a node, so distinctness is per node, and grouping by s alone gives the correct one-row-per-shop grain)."
+    }
+  },
+  {
+    "query": "query-58",
+    "case": {
+      "source_index": 58,
+      "question": "For each country, what is the average visit duration in seconds for visits performed by 'Sick' people to 'Grocery shop' places, and how does this compare to the average visit duration across all place types in that country? Show the country name, average duration for 'Grocery shop' visits, and average duration for all visits.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place {type: 'Grocery shop'})-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE v.duration.seconds IS NOT NULL WITH c.name AS country, AVG(v.duration.seconds) AS groceryAvgDuration MATCH (p2:Person)-[v2:VISITS]->(pl2:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE c.name = country AND v2.duration.seconds IS NOT NULL WITH country, groceryAvgDuration, AVG(v2.duration.seconds) AS allAvgDuration RETURN country, groceryAvgDuration, allAvgDuration",
+      "initial_query": "MATCH (c:Country)<-[:PART_OF]-(:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(p:Person)\nWHERE p.healthstatus = 'Sick'\nWITH c, pl.type AS placeType, v.duration.seconds AS secs\nRETURN c.name AS country, avg(CASE WHEN placeType = 'Grocery shop' THEN secs END) AS groceryShopAvgSeconds, avg(secs) AS allPlacesAvgSeconds\nORDER BY country",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (c:Country)<-[:PART_OF]-(:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(p:Person)\nWHERE p.healthstatus = 'Sick'\nWITH c, pl.type AS placeType, v.duration.seconds AS secs\nRETURN c.name AS country, avg(CASE WHEN placeType = 'Grocery shop' THEN secs END) AS groceryShopAvgSeconds, avg(secs) AS allPlacesAvgSeconds\nORDER BY country",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_failed"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The generated query applies `WHERE p.healthstatus = 'Sick'` before grouping, so both aggregates are restricted to Sick people. `allPlacesAvgSeconds` is therefore the average over Sick visitors only, whereas the question (and reference) require the average across all place types for all visitors in that country; any non-Sick visit changes the reference value but not the candidate's. Countries whose overall average would differ purely due to non-Sick visits are reported with a wrong comparison baseline, and countries with no Sick visits are dropped entirely. Secondary mismatch: the candidate traverses `(:Visit)-[:LOCATED_AT]->(:Place)<-[:PERFORMS_VISIT]-(:Person)` and reads `Visit.duration`, while the reference uses the `(Person)-[:VISITS]->(Place)` relationship's duration; the schema does not guarantee these two representations agree (a Visit can be LOCATED_AT multiple places or PERFORMS_VISIT by multiple persons, changing row multiplicity and the averages)."
+    }
+  },
+  {
+    "query": "query-59",
+    "case": {
+      "source_index": 59,
+      "question": "Considering only visits with a duration greater than 1 hour (3600 seconds), for each continent, calculate the average number of visits per person and the average duration of those visits in seconds. Return the continent name, average visits per person, and average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds > 3600 WITH c.name AS continent, p, v COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDuration WITH continent, AVG(visitCount) AS avgVisitsPerPerson, AVG(avgDuration) AS avgVisitDuration RETURN continent, avgVisitsPerPerson, avgVisitDuration",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWHERE v.duration > 3600\nWITH c.name AS continent, count(v) AS totalVisits, count(DISTINCT p) AS persons, avg(v.duration) AS avgVisitDuration\nRETURN continent, toFloat(totalVisits) / persons AS avgVisitsPerPerson, avgVisitDuration\nORDER BY continent",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, v, duration.inSeconds(v.duration) AS seconds\nWHERE seconds > 3600\nWITH c.name AS continent, count(v) AS totalVisits, count(DISTINCT p) AS persons, avg(seconds) AS avgVisitDuration\nRETURN continent, toFloat(totalVisits) / persons AS avgVisitsPerPerson, avgVisitDuration\nORDER BY continent",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Per the plain reading, the two metrics are: avg visits per person = total qualifying visits / distinct persons (candidate: toFloat(totalVisits)/persons — matches), and avg duration = straight mean of qualifying visit durations (candidate: avg(seconds) over the filtered rows — matches). The reference computes avg duration as an unweighted mean of per-person average durations (AVG(avgDuration) after grouping by (continent, person)), which diverges whenever persons have unequal visit counts (e.g., person A one 7200s visit, person B three 3600s visits → reference 5400 vs candidate 4500). avgVisitsPerPerson is equivalent (both equal total/distinct persons), but avgVisitDuration is not, so the returned rows differ. The candidate also reads the PERFORMS_VISIT/Visit/LOCATED_AT subgraph rather than the VISITS relationship, reinforcing the non-equivalence. The candidate faithfully answers the question; it simply differs from the reference's mean-of-means formulation."
+    }
+  },
+  {
+    "query": "query-60",
+    "case": {
+      "source_index": 60,
+      "question": "For each type of place, calculate the average duration (in seconds) of visits made by people with 'Healthy' status and the average duration of visits made by people with 'Sick' status. Return the place type, average healthy visit duration, and average sick visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)\nWHERE v.duration.seconds IS NOT NULL\nWITH pl.type AS placeType, p.healthstatus AS healthStatus, v.duration.seconds AS duration\nWITH placeType, \n     AVG(CASE WHEN healthStatus = 'Healthy' THEN duration ELSE null END) AS avgHealthyDuration,\n     AVG(CASE WHEN healthStatus = 'Sick' THEN duration ELSE null END) AS avgSickDuration\nRETURN placeType, avgHealthyDuration, avgSickDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No Cypher query was generated (candidate is 'None'), so it cannot produce any requested result: no place type, average healthy duration, or average sick duration is returned, and the grouping by Place.type with per-healthstatus AVG aggregation is entirely absent."
+    }
+  },
+  {
+    "query": "query-61",
+    "case": {
+      "source_index": 61,
+      "question": "For each continent, determine the total number of visits and calculate the average visit duration (in seconds). Return the continent name, total visits, and average duration, ordered by the total number of visits in descending order.",
+      "reference_query": "MATCH (v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWHERE v.duration.seconds IS NOT NULL\nWITH c.name AS continent, v, v.duration.seconds AS duration\nWITH continent, COUNT(v) AS totalVisits, AVG(duration) AS avgDuration\nRETURN continent, totalVisits, avgDuration\nORDER BY totalVisits DESC",
+      "initial_query": "MATCH (v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, count(v) AS totalVisits, avg(duration.inSeconds(v.duration)) AS averageDurationInSeconds\nORDER BY totalVisits DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, count(v) AS totalVisits, avg(duration.inSeconds(v.duration)) AS averageDurationInSeconds\nORDER BY totalVisits DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate groups by continent name, counts all visits, and averages non-null total seconds using duration.inSeconds(v.duration). The reference filters out null-duration visits before counting, which can lower totalVisits, and it averages the .seconds property rather than the total duration in seconds, so the results are not equivalent."
+    }
+  },
+  {
+    "query": "query-62",
+    "case": {
+      "source_index": 62,
+      "question": "For each region, calculate the average number of visits performed by persons before their confirmed time. Return the region name and the average number of pre-confirmation visits.",
+      "reference_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWHERE v.starttime < p.confirmedtime\nWITH r.name AS region, p, v\nWITH region, p, COUNT(v) AS preConfirmationVisits\nWITH region, AVG(preConfirmationVisits) AS avgPreConfirmationVisits\nRETURN region, avgPreConfirmationVisits",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit), (v)-[:LOCATED_AT]->(pl:Place), (pl)-[:PART_OF]->(r:Region)\nWHERE v.starttime < p.confirmedtime\nWITH r, p, count(DISTINCT v) AS preConfirmationVisits\nRETURN r.name AS region, avg(preConfirmationVisits) AS avgPreConfirmationVisits",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit), (v)-[:LOCATED_AT]->(pl:Place), (pl)-[:PART_OF]->(r:Region)\nWHERE v.starttime < p.confirmedtime\nWITH r, p, count(DISTINCT v) AS preConfirmationVisits\nRETURN r.name AS region, avg(preConfirmationVisits) AS avgPreConfirmationVisits",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "Both queries compute, per person, the number of pre-confirmation visits and then average those counts; the candidate's count(DISTINCT v) matches the reference, which effectively counts distinct visits because its first WITH (r.name, p, v) collapses duplicate LOCATED_AT/PART_OF paths. The decisive difference is the grouping key: the reference aggregates by r.name, the candidate by the Region node and only projects r.name afterwards. Region has only a 'name' property (no id/uniqueness guarantee), so if two distinct Region nodes share a name, the reference returns one row per name (averaging persons across both nodes) while the candidate returns two rows with the same region name and different averages. Correctness therefore depends on the unstated assumption that region names are unique."
+    }
+  },
+  {
+    "query": "query-63",
+    "case": {
+      "source_index": 63,
+      "question": "For each country, compute the average visit duration (in seconds) for visits to 'Hospital' places and the average visit duration for visits to 'Park' places. Return the country name, average hospital visit duration, and average park visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country)\nWHERE v.duration.seconds IS NOT NULL AND (pl.type = 'Hospital' OR pl.type = 'Park')\nWITH c.name AS country, pl.type AS placeType, v.duration.seconds AS duration\nWITH country,\n     AVG(CASE WHEN placeType = 'Hospital' THEN duration ELSE null END) AS avgHospitalDuration,\n     AVG(CASE WHEN placeType = 'Park' THEN duration ELSE null END) AS avgParkDuration\nRETURN country, avgHospitalDuration, avgParkDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No candidate query was produced (Generated Cypher: None), so it returns nothing and cannot answer the per-country Hospital/Park average visit duration question; it therefore also cannot be equivalent to the reference, which groups by c.name and averages v.duration.seconds via conditional CASE aggregation over (Person)-[:VISITS]->(Place)-[:PART_OF]->(:Region)-[:PART_OF]->(Country)."
+    }
+  },
+  {
+    "query": "query-64",
+    "case": {
+      "source_index": 64,
+      "question": "For each continent, calculate the percentage of visits made by 'Sick' persons to 'Mall' places. Return the continent name and the percentage of 'Sick' person visits to 'Mall' places.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWHERE pl.type = 'Mall'\nWITH c.name AS continent, p.healthstatus AS healthStatus, v\nWITH continent, COUNT(v) AS totalMallVisits, COUNT(CASE WHEN healthStatus = 'Sick' THEN v ELSE null END) AS sickMallVisits\nRETURN continent, toFloat(sickMallVisits) / totalMallVisits * 100 AS sickMallVisitPercentage",
+      "initial_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(per:Person)\nWITH c.name AS continent, count(v) AS totalVisits, sum(CASE WHEN per.healthstatus = 'Sick' AND pl.type = 'Mall' THEN 1 ELSE 0 END) AS sickMallVisits\nRETURN continent, toFloat(sickMallVisits) * 100.0 / toFloat(totalVisits) AS sickMallVisitPercentage\nORDER BY sickMallVisitPercentage DESC",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(pl:Place)<-[:LOCATED_AT]-(v:Visit)<-[:PERFORMS_VISIT]-(per:Person)\nWITH c, count(DISTINCT v) AS totalVisits, count(DISTINCT CASE WHEN pl.type = 'Mall' AND per.healthstatus = 'Sick' THEN v END) AS sickMallVisits\nRETURN c.name AS continent, toFloat(sickMallVisits) * 100.0 / toFloat(totalVisits) AS sickMallVisitPercentage\nORDER BY sickMallVisitPercentage DESC",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Wrong aggregation grain for the denominator: the candidate divides sick-Mall visits by ALL visits in the continent (count(DISTINCT v) over every Place type), while the question/reference bases the percentage on Mall visits only (pl.type = 'Mall' filter applied before counting). Counterexample: a continent with 10 Mall visits (5 by Sick persons) plus 90 visits to other place types → reference yields 50%, candidate yields 5/100 = 5%. Additionally, the candidate counts visits via the (Person)-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place) chain instead of the (Person)-[:VISITS]->(Place) relationship with VISITS properties (id/starttime/endtime) used by the reference; these are distinct relationship structures, so counts (and DISTINCT dedup behavior) can differ or be empty depending on which is populated. The extra ORDER BY is presentation-only but does not fix the ratio."
+    }
+  },
+  {
+    "query": "query-65",
+    "case": {
+      "source_index": 65,
+      "question": "For each continent, find the average number of visits performed by persons with 'Sick' health status and the average visit duration in seconds. Return the continent name, average visit count, and average duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place)\nMATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c.name AS continent, p, v\nWITH continent, COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDuration\nRETURN continent, AVG(visitCount) AS avgVisits, AVG(avgDuration) AS overallAvgDuration",
+      "initial_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)-[:PART_OF]->(country:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalDurationSeconds\nWITH c, avg(visitCount) AS averageVisitCount, sum(totalDurationSeconds) / sum(visitCount) AS averageDurationSeconds\nRETURN c.name AS continent, averageVisitCount, averageDurationSeconds\nORDER BY continent",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)-[:PART_OF]->(country:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalDurationSeconds\nWITH c, avg(visitCount) AS averageVisitCount, sum(totalDurationSeconds) / sum(visitCount) AS averageDurationSeconds\nRETURN c.name AS continent, averageVisitCount, averageDurationSeconds\nORDER BY continent",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Two concrete semantic mismatches. (1) Path/relationship swap: the reference enumerates visits via (Person{healthstatus:'Sick'})-[:VISITS]->(Place) and reads the VISITS.duration relationship property, while the candidate enumerates via (Person)-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place) and reads Visit.duration. The schema declares these as distinct relationship types with their own duration properties, so a sick person with a VISITS edge but no PERFORMS_VISIT/Visit node (or vice versa) changes both the per-person visit counts and the durations; the two representations are not guaranteed to be consistent, so visit counts and durations can be missing or extra. (2) Duration aggregation grain: the reference computes AVG(visitCount) and AVG(avgDuration), i.e., an unweighted mean of each person's mean duration, whereas the candidate computes sum(totalDurationSeconds)/sum(visitCount), a visit-count-weighted mean. Counterexample within one continent: person A has 1 visit of 100s, person B has 3 visits of 10s each -> reference overallAvgDuration = (100+10)/2 = 55, candidate averageDurationSeconds = 130/4 = 32.5. Additionally, grouping by the c node rather than c.name yields one row per Continent node instead of merging continents sharing a name, and because sum() skips NULL durations while sum(visitCount) still counts those visits, the candidate's denominator includes null-duration visits whereas the reference's AVG skips them."
+    }
+  },
+  {
+    "query": "query-66",
+    "case": {
+      "source_index": 66,
+      "question": "For each type of place, calculate the total number of visits and the average duration of visits that started before '2020-04-26 T 00:00:00 UTC'. Return the place type, total visit count, and average duration in seconds.",
+      "reference_query": "MATCH (v:Visit)-[:LOCATED_AT]->(pl:Place)\nWHERE v.starttime < datetime('2020-04-26T00:00:00 UTC')\nWITH pl.type AS placeType, v\nWITH placeType, COUNT(v) AS totalVisits, AVG(v.duration.seconds) AS avgDuration\nRETURN placeType, totalVisits, avgDuration",
+      "initial_query": "MATCH (visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE visit.starttime < datetime('2020-04-26T00:00:00Z')\nRETURN place.type AS placeType,\n       count(*) AS totalVisitCount,\n       avg(durationInSeconds(visit.duration)) AS averageDurationSeconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE visit.starttime < datetime('2020-04-26T00:00:00Z')\nRETURN place.type AS placeType,\n       count(*) AS totalVisitCount,\n       avg(durationInSeconds(visit.duration)) AS averageDurationSeconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate groups by place.type, uses count(*) (each matched row is one visit, and v is always non-null so this equals COUNT(v)), and filters starttime < datetime('...Z'), where 'Z' is valid UTC representing the same instant. It uses durationInSeconds(visit.duration), which correctly returns the TOTAL duration in seconds, matching 'average duration in seconds'. The reference instead uses v.duration.seconds, which returns only the seconds component after whole days/months are carried out (e.g., P1DT2H gives .seconds=7200 but durationInSeconds=93600). For any visit with duration >= 1 day, which the DURATION-typed property permits, the two averages differ, so they are not semantically equivalent; the candidate is the more faithful reading of the question."
+    }
+  },
+  {
+    "query": "query-67",
+    "case": {
+      "source_index": 67,
+      "question": "For each region, determine the percentage of visits made by people with 'Sick' healthstatus. Return the region name and the percentage of visits by sick people.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r, p, pl\nWITH r.name AS regionName, COUNT(pl) AS totalVisits, SUM(CASE WHEN p.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits\nRETURN regionName, (toFloat(sickVisits) / totalVisits) * 100 AS sickVisitPercentage",
+      "initial_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nMATCH (v)<-[:PERFORMS_VISIT]-(person:Person)\nWITH r.name AS region, count(DISTINCT v) AS totalVisits, sum(CASE WHEN person.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits\nRETURN region, toFloat(sickVisits) * 100.0 / totalVisits AS sickVisitPercentage\nORDER BY sickVisitPercentage DESC",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nMATCH (v)<-[:PERFORMS_VISIT]-(person:Person)\nWITH r.name AS region, count(DISTINCT v) AS totalVisits\nMATCH (sv:Visit)-[:LOCATED_AT]->(sp:Place)-[:PART_OF]->(sr:Region)\nMATCH (sv)<-[:PERFORMS_VISIT]-(sickPerson:Person)\nWHERE sr.name = region AND sickPerson.healthstatus = 'Sick'\nWITH region, totalVisits, count(DISTINCT sv) AS sickVisits\nRETURN region, toFloat(sickVisits) * 100.0 / totalVisits AS sickVisitPercentage\nORDER BY sickVisitPercentage DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Two decisive mismatches. (1) Missing rows: the candidate's second MATCH ... WHERE sickPerson.healthstatus = 'Sick' is a required pattern, so any region whose sick-visit count is zero produces no row at all and is dropped from the result, whereas the question (and the reference) require it to appear with 0.0%. (2) Different aggregation grain/counting unit: the reference counts Person-[:VISITS]->Place rows per region (COUNT(pl)), while the candidate counts distinct Visit nodes linked via PERFORMS_VISIT and LOCATED_AT. The schema allows VISITS edges that have no corresponding Visit node (or Visit nodes with no PERFORMS_VISIT edge), so totals and percentages can diverge; visits are also counted per region without regard to which person-place row they came from. The extra ORDER BY is harmless, but the zero-sick-region omission alone changes the requested result."
+    }
+  },
+  {
+    "query": "query-68",
+    "case": {
+      "source_index": 68,
+      "question": "For each continent, calculate the average number of visits per person and the average duration of visits in seconds. Return the continent name, average visits per person, and average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c.name AS continent, p, v\nWITH continent, COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDuration\nRETURN continent, AVG(visitCount) AS avgVisitsPerPerson, AVG(avgDuration) AS overallAvgDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No Cypher query was generated (\"None\"), so it returns nothing and cannot compute per-continent average visits per person or average visit duration; there is no formulation to compare against the reference, hence not equivalent."
+    }
+  },
+  {
+    "query": "query-69",
+    "case": {
+      "source_index": 69,
+      "question": "For each country, calculate the average visit duration in seconds for visits performed by people who were confirmed to be sick before '2020-04-21 T 00:00:00 UTC'. Return the country name and the average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country)\nWHERE p.confirmedtime < datetime('2020-04-21T00:00:00 UTC') AND p.healthstatus = 'Sick'\nWITH c.name AS country, v\nRETURN country, AVG(v.duration.seconds) AS avgVisitDuration",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWHERE p.confirmedtime < datetime('2020-04-21T00:00:00Z')\nRETURN c.name AS country, avg(duration.inSeconds(v.duration)) AS averageVisitDurationInSeconds\nORDER BY country",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWHERE p.confirmedtime < datetime('2020-04-21T00:00:00Z')\nRETURN c.name AS country, avg(duration.inSeconds(v.duration)) AS averageVisitDurationInSeconds\nORDER BY country",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate drops the required sickness condition: it only filters p.confirmedtime < 2020-04-21T00:00:00Z, whereas the question asks for people 'confirmed to be sick', which requires p.healthstatus = 'Sick'. Any person with a non-Sick (or null) healthstatus and an early confirmedtime is wrongly included in the average. Secondary issue: it aggregates duration.inSeconds(v.duration) (total seconds) instead of the reference's v.duration.seconds (seconds component), which changes values for durations of a minute or more."
+    }
+  },
+  {
+    "query": "query-71",
+    "case": {
+      "source_index": 71,
+      "question": "For each continent, determine the average visit duration in seconds for visits to each type of place. Return the continent name, place type, and average visit duration.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place) MATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE p.healthstatus IS NOT NULL WITH c.name AS continent, pl.type AS placeType, p, pl MATCH (p)-[:PERFORMS_VISIT]->(v:Visit) WHERE v.duration.seconds IS NOT NULL RETURN continent, placeType, AVG(v.duration.seconds)",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No query was produced ('None'), so it cannot return continent, place type, or any average duration; it yields no result at all, unlike the reference which groups by c.name/pl.type and computes AVG(v.duration.seconds) over PERFORMS_VISIT edges."
+    }
+  },
+  {
+    "query": "query-72",
+    "case": {
+      "source_index": 72,
+      "question": "For each region, calculate the average number of visits made by persons with 'Sick' healthstatus and the average duration of those visits in seconds. Return the region name, average number of visits, and average visit duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:VISITS]->(pl:Place) MATCH (pl)-[:PART_OF]->(r:Region) WITH r.name AS region, p MATCH (p)-[:PERFORMS_VISIT]->(v:Visit) WHERE v.duration.seconds IS NOT NULL RETURN region, COUNT(v), AVG(v.duration.seconds)",
+      "initial_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalSeconds\nWITH region, avg(visitCount) AS avgVisits, sum(totalSeconds) / sum(visitCount) AS avgVisitDurationSeconds\nRETURN region, avgVisits, avgVisitDurationSeconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS totalSeconds\nWITH region, avg(visitCount) AS avgVisits, sum(totalSeconds) / sum(visitCount) AS avgVisitDurationSeconds\nRETURN region, avgVisits, avgVisitDurationSeconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The candidate groups by (r.name, p.id) then aggregates per region, which matches the question's intent, but correctness hinges on unverifiable assumptions: (1) it assigns visits to regions via Visit-[:LOCATED_AT]->Place-[:PART_OF]->Region while ignoring the Person-[:VISITS]->Place representation in the schema; nothing guarantees these two representations coincide, so sick persons whose VISITS-place is in region R but whose Visit nodes are located elsewhere (or lack LOCATED_AT) are dropped, and persons with PERFORMS_VISIT/LOCATED_AT paths but no VISITS edge are added. (2) visitCount counts all located visits while sum(duration.inSeconds(v.duration)) ignores NULL durations, so any visit with NULL/absent duration dilutes avgVisitDurationSeconds (e.g., one 60s visit plus one NULL visit yields 30s instead of 60s) — the reference's `WHERE v.duration.seconds IS NOT NULL` implies NULLs are possible. (3) Grouping by p.id rather than p assumes id is unique and non-NULL. Regarding reference equivalence: the reference performs no outer aggregation — `RETURN region, COUNT(v), AVG(v.duration.seconds)` emits one row per (region, sick person) and averages all of that person's visits regardless of location, so with two sick persons in a region it returns two rows with raw counts while the candidate returns one averaged row; it also uses the seconds component (duration.seconds) rather than total seconds (duration.inSeconds), so the two can yield different results on the same data."
+    }
+  },
+  {
+    "query": "query-73",
+    "case": {
+      "source_index": 73,
+      "question": "For each country, calculate the ratio of 'Sick' persons' visits to the total visits, and then determine the average visit duration in seconds for all visits. Return the country name, visit ratio, and average duration.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place) MATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WITH c.name AS country, p, pl MATCH (p)-[:PERFORMS_VISIT]->(v:Visit) WHERE v.duration.seconds IS NOT NULL WITH country, COUNT(v) AS totalVisits, SUM(CASE WHEN p.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits RETURN country, toFloat(sickVisits) / totalVisits AS visitRatio, AVG(v.duration.seconds)",
+      "initial_query": "MATCH (c:Country)-[:PART_OF*1..2]->(p:Place)<-[v:VISITS]-(person:Person)\nOPTIONAL MATCH (person)-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(p)\nWITH c.name AS countryName,\n  count(v) AS totalVisits,\n  sum(CASE WHEN person.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits,\n  avg(visit.duration.inSeconds) AS averageDurationSeconds\nRETURN countryName,\n  toFloat(sickVisits) / toFloat(totalVisits) AS visitRatio,\n  averageDurationSeconds",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (person:Person)-[v:VISITS]->(p:Place)\nOPTIONAL MATCH (p)-[:PART_OF]->(c:Country)\nOPTIONAL MATCH (p)-[:PART_OF]->(:Region)-[:PART_OF]->(c2:Country)\nWITH coalesce(c.name, c2.name) AS country,\n  count(v) AS totalVisits,\n  sum(CASE WHEN person.healthstatus = 'Sick' THEN 1 ELSE 0 END) AS sickVisits,\n  avg(v.duration.inSeconds) AS averageDurationSeconds\nRETURN country,\n  toFloat(sickVisits) / toFloat(totalVisits) AS visitRatio,\n  averageDurationSeconds",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_failed"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Aggregation grain and duration source differ. The reference groups per country over rows of (Person)-[:VISITS]->(Place) joined to (Person)-[:PERFORMS_VISIT]->(Visit), so COUNT(v) counts each performed Visit once per visited place (a person with 1 visited place and 3 performed visits contributes 3 to totalVisits/sickVisits), and it excludes rows where v.duration.seconds IS NULL from both numerator and denominator. The candidate instead counts VISITS relationships (count(v) where v is a relationship), never requires PERFORMS_VISIT, and includes relationships with null duration in the counts, so totalVisits, sickVisits and the ratio can differ (e.g., a Sick person with one VISITS edge but no PERFORMS_VISIT is excluded by the reference yet counted as a sick visit by the candidate; a person visiting 3 places with 5 performed visits yields 5 vs 3). The average also reads the VISITS relationship's duration (v.duration.inSeconds, total seconds) rather than the Visit node's duration.seconds (seconds component), which are distinct schema properties with no guaranteed equal values; AVG ignores nulls so the missing IS NOT NULL filter is harmless only for the average. Additionally, if any Place were PART_OF both a Country and a Region->Country, the two OPTIONAL MATCHes multiply rows, inflating counts."
+    }
+  },
+  {
+    "query": "query-74",
+    "case": {
+      "source_index": 74,
+      "question": "For each person health status, find the average number of visits made to each type of place. Return the health status, the place type, and the average number of visits.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place) WITH p.healthstatus AS healthStatus, pl.type AS placeType, COUNT(*) AS visitCount RETURN healthStatus, placeType, AVG(visitCount) AS avgVisits",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH p.healthstatus AS healthstatus, pl.type AS placetype, p, count(v) AS visits\nRETURN healthstatus, placetype, avg(visits) AS averageVisits",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH p.healthstatus AS healthstatus, pl.type AS placetype, p, count(v) AS visits\nRETURN healthstatus, placetype, avg(visits) AS averageVisits",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate first groups by (healthstatus, placetype, p) to get each person's visit count, then AVG over persons per (healthstatus, placetype), correctly yielding the average visits per person for each health status/place type. The reference's inner WITH groups only by (healthStatus, placeType), so its outer AVG runs on a single value per group and returns the TOTAL visit count, not an average. Counterexample: two 'healthy' persons with 3 and 1 hospital visits give candidate avg=2 vs reference=4, so they are not equivalent."
+    }
+  },
+  {
+    "query": "query-75",
+    "case": {
+      "source_index": 75,
+      "question": "For each region, calculate the average duration (in seconds) of visits performed by persons with 'Sick' health status. Return the region name and the average duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region) WHERE v.duration.seconds IS NOT NULL WITH r.name AS region, v.duration.seconds AS visitDuration RETURN region, AVG(visitDuration) AS avgVisitDuration",
+      "initial_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, avg(duration.inSeconds(v.duration)) AS average_duration_seconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, avg(duration.inSeconds(v.duration)) AS average_duration_seconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate aggregates duration.inSeconds(v.duration) over the Visit node reached via (Person {healthstatus:'Sick'})-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place)-[:PART_OF]->(Region), grouped by r.name — this yields the true total seconds per visit and matches the question's request. The reference instead uses v.duration.seconds on the VISITS relationship, which returns only the seconds *component* of the normalized duration (e.g. PT2M30S -> 30, PT2M -> 0), so the two queries return different averages for any duration containing minutes/hours/days. Reference's IS NOT NULL filter is harmless since AVG ignores nulls, and both queries exclude regions with no qualifying sick-person visits."
+    }
+  },
+  {
+    "query": "query-76",
+    "case": {
+      "source_index": 76,
+      "question": "For each country, determine the average number of visits performed by persons before their confirmed time, grouped by their health status. Return the country name, health status, and the average number of pre-confirmation visits.",
+      "reference_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit) MATCH (pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE v.starttime < p.confirmedtime WITH c.name AS country, p.healthstatus AS healthStatus, p, COUNT(v) AS preConfirmationVisits RETURN country, healthStatus, AVG(preConfirmationVisits) AS avgPreConfirmationVisits",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(rg:Region)-[:PART_OF]->(c:Country)\nWHERE v.starttime < p.confirmedtime\nWITH c.name AS country_name, p.healthstatus AS health_status, p, count(DISTINCT v) AS pre_confirmation_visits\nRETURN country_name, health_status, avg(pre_confirmation_visits) AS avg_pre_confirmation_visits\nORDER BY country_name, health_status",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(rg:Region)-[:PART_OF]->(c:Country)\nWHERE v.starttime < p.confirmedtime\nWITH c.name AS country_name, p.healthstatus AS health_status, p, count(DISTINCT v) AS pre_confirmation_visits\nRETURN country_name, health_status, avg(pre_confirmation_visits) AS avg_pre_confirmation_visits\nORDER BY country_name, health_status",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "The candidate links each qualifying Visit through LOCATED_AT/PART_OF to the actual country and averages per-person counts. The reference's second MATCH is disconnected from the person/visit, creating a cross product with all Place-Region-Country paths; for example, two persons with visits in different countries can yield different per-country counts and averages."
+    }
+  },
+  {
+    "query": "query-77",
+    "case": {
+      "source_index": 77,
+      "question": "For each continent, calculate the average visit duration (in seconds) for each type of place, considering only visits made by persons with a 'Sick' health status. Return the continent name, place type, and the average duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place) MATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(cont:Continent) WHERE v.duration.seconds IS NOT NULL WITH cont.name AS continent, pl.type AS placeType, v.duration.seconds AS visitDuration RETURN continent, placeType, AVG(visitDuration) AS avgVisitDuration",
+      "initial_query": "MATCH (sickPerson:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nRETURN continent.name AS ContinentName, place.type AS PlaceType, avg(visit.duration.inSeconds) AS AvgVisitDurationSeconds\nORDER BY ContinentName, PlaceType",
+      "initial_status": "compiled",
+      "final_query": "MATCH (sickPerson:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nRETURN continent.name AS ContinentName, place.type AS PlaceType, avg(duration.inSeconds(visit.duration)) AS AvgVisitDurationSeconds\nORDER BY ContinentName, PlaceType",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "repeated_query"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate uses Person-[PERFORMS_VISIT]->Visit-[LOCATED_AT]->Place and Visit.duration, while the reference uses Person-[VISITS]->Place and VISITS.duration. The schema allows these to differ: Sick persons with VISITS relationships but no corresponding PERFORMS_VISIT/Visit rows are omitted, and Visit-only rows could be included. This changes continent/place-type averages. The candidate also does not exclude null visit durations before averaging."
+    }
+  },
+  {
+    "query": "query-78",
+    "case": {
+      "source_index": 78,
+      "question": "For each type of place, find the average visit duration in seconds and the number of people who visited that place type with a 'Sick' health status. Return the place type, average duration, and the count of sick visitors.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place) WHERE p.healthstatus = 'Sick' WITH pl.type AS placeType, p, pl MATCH (p)-[:VISITS]->(pl) WHERE v.duration.seconds IS NOT NULL WITH placeType, AVG(v.duration.seconds) AS avgDuration, COUNT(DISTINCT p) AS sickVisitorCount RETURN placeType, avgDuration, sickVisitorCount",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No candidate query was produced (Generated Cypher: None), so it returns nothing and cannot answer the question about per-place-type average duration and sick visitor counts; an empty query is not semantically equivalent to the reference. Note also that the reference itself is flawed (it groups by p/pl alongside placeType, and its second MATCH references an unbound variable v), which reinforces that neither query yields a defensible result."
+    }
+  },
+  {
+    "query": "query-79",
+    "case": {
+      "source_index": 79,
+      "question": "For each continent, calculate the average duration of visits in seconds and the number of distinct persons who performed visits in that continent. Return the continent name, average visit duration, and distinct person count.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds IS NOT NULL WITH c.name AS continent, v, p  WITH continent, AVG(v.duration.seconds) AS avgDuration, COUNT(DISTINCT p) AS distinctPersonCount RETURN continent, avgDuration, distinctPersonCount",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No Cypher query was generated (None), so it cannot compute per-continent average visit duration in seconds or distinct person counts and returns no answer at all, whereas the reference aggregates AVG(v.duration.seconds) and COUNT(DISTINCT p) grouped by continent name over (p:Person)-[:VISITS]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent). Any concrete input yields results for the reference and nothing for the candidate."
+    }
+  },
+  {
+    "query": "query-80",
+    "case": {
+      "source_index": 80,
+      "question": "For each region, find the average visit duration in seconds and the total number of visits made by persons with 'Healthy' status. Return the region name, average duration, and total healthy visits.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region) WHERE p.healthstatus = 'Healthy' AND v.duration.seconds IS NOT NULL WITH r.name AS region, v.duration.seconds AS duration WITH region, AVG(duration) AS avgDuration, COUNT(duration) AS totalHealthyVisits RETURN region, avgDuration, totalHealthyVisits",
+      "initial_query": "MATCH (p:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r, avg(duration.inSeconds(v.duration)) AS avg_duration, count(v) AS total_visits\nRETURN r.name AS region_name, avg_duration, total_visits",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nWITH r, avg(duration.inSeconds(v.duration)) AS avg_duration, count(v) AS total_visits\nRETURN r.name AS region_name, avg_duration, total_visits",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The candidate traverses the parallel modelling of visits (Person)-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place) instead of the (Person)-[:VISITS]->(Place) edge carrying duration; the schema declares both representations but guarantees no 1:1 coverage, so a person could have a VISITS edge (or a Visit with no LOCATED_AT) and be counted by the reference but not the candidate (or vice versa), changing both the average and the visit count. Beyond that, results diverge from the reference on data: count(v) counts visits whose duration is NULL/missing while the reference's COUNT(duration) excludes them; duration.inSeconds(v.duration) yields total seconds whereas v.duration.seconds yields only the seconds component, so any duration with minutes/hours (e.g. PT1M30S -> 90 vs 30) gives different averages; and grouping by the Region node instead of r.name produces multiple rows when two Region nodes share a name, where the reference merges them into one."
+    }
+  },
+  {
+    "query": "query-81",
+    "case": {
+      "source_index": 81,
+      "question": "For each country, calculate the average visit duration in seconds for visits occurring before '2020-04-30', and count the number of distinct places visited. Return the country name, average duration, and distinct place count.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE v.starttime < datetime('2020-04-30T00:00:00.000Z') AND v.duration.seconds IS NOT NULL WITH c.name AS country, v.duration.seconds AS duration, pl WITH country, AVG(duration) AS avgDuration, COUNT(DISTINCT pl) AS distinctPlaceCount RETURN country, avgDuration, distinctPlaceCount",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The generated query is 'None' (no Cypher was produced), so it cannot answer the question at all: it returns no country names, no AVG(v.duration.seconds) per country for visits with starttime < '2020-04-30', and no COUNT(DISTINCT pl) of places reached via (Person)-[:VISITS]->(Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country). Being empty, it trivially cannot be semantically equivalent to the reference query, which groups solely by c.name and aggregates both measures at that grain."
+    }
+  },
+  {
+    "query": "query-82",
+    "case": {
+      "source_index": 82,
+      "question": "For each continent, calculate the average visit duration in seconds for each type of place. Return the continent name, place type, and average duration, ordering the results by continent and then by average duration in descending order.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds IS NOT NULL WITH c.name AS continent, pl.type AS placeType, v.duration.seconds AS duration WITH continent, placeType, AVG(duration) AS avgDuration RETURN continent, placeType, avgDuration ORDER BY continent, avgDuration DESC",
+      "initial_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(co:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, pl.type AS placeType, avg(duration.inSeconds(v.duration)) AS averageDuration\nORDER BY continent ASC, averageDuration DESC",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(co:Country)-[:PART_OF]->(c:Continent)\nRETURN c.name AS continent, pl.type AS placeType, avg(duration.inSeconds(v.duration)) AS averageDuration\nORDER BY continent ASC, averageDuration DESC",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Same pattern (Person-[VISITS]->Place->Region->Country->Continent), same grouping keys (c.name, pl.type), same ORDER BY continent ASC, averageDuration DESC; AVG ignores NULLs so the reference's IS NOT NULL pre-filter is immaterial, and duration.inSeconds(NULL) yields NULL and is skipped. Decisive difference: duration.inSeconds(v.duration) returns the total seconds of the DURATION (e.g. PT1H -> 3600), whereas the reference's v.duration.seconds returns only the seconds component (PT1H -> 0). For any visit duration containing hours/minutes/days the two aggregations differ, so the queries are not equivalent, and the candidate's total-seconds reading is the one matching 'average visit duration in seconds'."
+    }
+  },
+  {
+    "query": "query-83",
+    "case": {
+      "source_index": 83,
+      "question": "For each type of place, calculate the average visit duration in seconds and the number of distinct persons who visited that type of place. Return the place type, average visit duration, and the number of distinct persons.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place) WHERE v.duration.seconds IS NOT NULL WITH pl.type AS placeType, v.duration.seconds AS visitDuration, p WITH placeType, AVG(visitDuration) AS avgDuration, COUNT(DISTINCT p) AS distinctPersons RETURN placeType, avgDuration, distinctPersons",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH pl.type AS placeType, avg(v.duration.toSeconds) AS avgVisitDurationSeconds, count(DISTINCT p) AS distinctPersons\nRETURN placeType, avgVisitDurationSeconds, distinctPersons\nORDER BY placeType",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)\nWITH pl.type AS placeType, avg(duration.inSeconds(v.duration)) AS avgVisitDurationSeconds, count(DISTINCT p) AS distinctPersons\nRETURN placeType, avgVisitDurationSeconds, distinctPersons\nORDER BY placeType",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "duration.inSeconds(v.duration) is not a conversion to total seconds. It takes a duration and returns a duration truncated to seconds (type DURATION), so the candidate returns an averaged duration truncated to seconds. It does not return a numeric average in seconds. avg() does not accept duration values, so the query may also raise a type error. It also uses the PERFORMS_VISIT→Visit→LOCATED_AT→Place path instead of the VISITS relationship. Nothing in the schema guarantees that these paths enumerate the same visits, or that a Visit is tied to the Person's Place via VISITS. AVG also ignores NULLs, so the reference's 'duration.seconds IS NOT NULL' filter is harmless. The reference uses v.duration.seconds, the 0–59 seconds component of the VISITS duration, whereas the candidate uses the PERFORMS_VISIT path. A counterexample: a visit of PT90S stored only on VISITS, with no PERFORMS_VISIT/Visit/LOCATED_AT path, changes distinctPersons and avgDuration in the candidate. Even with a correct duration function, this path difference remains."
+    }
+  },
+  {
+    "query": "query-84",
+    "case": {
+      "source_index": 84,
+      "question": "For each continent, determine the average visit duration in seconds for visits performed by persons with 'Healthy' health status to 'Grocery shop' places. Return the continent name and the average visit duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Healthy'})-[v:VISITS]->(pl:Place {type: 'Grocery shop'}) MATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds IS NOT NULL WITH c.name AS continent, v.duration.seconds AS visitDuration RETURN continent, AVG(visitDuration)",
+      "initial_query": "MATCH (person:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nWHERE place.type = 'Grocery shop'\nRETURN continent.name AS continent, avg(duration.inSeconds(visit.duration)) AS averageVisitDurationSeconds\nORDER BY continent",
+      "initial_status": "compiled",
+      "final_query": "MATCH (person:Person {healthstatus: 'Healthy'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(continent:Continent)\nWHERE place.type = 'Grocery shop'\nRETURN continent.name AS continent, avg(duration.inSeconds(visit.duration)) AS averageVisitDurationSeconds\nORDER BY continent",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate calls `duration.inSeconds(...)`, which is not a valid Cypher function — APOC requires the `apoc.` namespace prefix — so the query fails to execute; additionally `apoc.duration.inSeconds` yields a DURATION, not a number, and AVG() is undefined over durations, so the requested \"average duration in seconds\" is not computed (the reference aggregates the numeric `duration.seconds`). Even ignoring that, the candidate traverses (Person)-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place), a different subgraph than the reference's (Person)-[:VISITS]->(Place) carrying the duration/starttime/endtime properties; the schema permits data where a Healthy person has a VISITS relationship to a 'Grocery shop' place with no corresponding Visit node (or one with different duration), so the two queries can return different continents, averages, or missing rows."
+    }
+  },
+  {
+    "query": "query-85",
+    "case": {
+      "source_index": 85,
+      "question": "For each region, calculate the average number of visits performed by each person and the total number of persons who performed more than the average number of visits. Return the region name and the count of persons with above-average visits.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(pl:Place)-[:PART_OF]->(r:Region) WITH r.name AS region, p, COUNT(pl) AS visitCount WITH region, AVG(visitCount) AS avgVisits, COLLECT({person: p, visits: visitCount}) AS personVisits UNWIND personVisits AS pv WITH region, avgVisits, pv WHERE pv.visits > avgVisits RETURN region, COUNT(pv.person) AS aboveAverageVisitorCount",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(DISTINCT v) AS visitCount\nWITH region, avg(visitCount) AS averageVisits, collect(visitCount) AS visitCounts\nRETURN region AS regionName, size([visitCount IN visitCounts WHERE visitCount > averageVisits]) AS aboveAveragePersonCount\nORDER BY regionName",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(r:Region)\nWITH r.name AS region, p.id AS personId, count(DISTINCT v) AS visitCount\nWITH region, collect(visitCount) AS visitCounts, avg(visitCount) AS averageVisits\nRETURN region AS regionName, size([c IN visitCounts WHERE c > averageVisits]) AS aboveAveragePersonCount\nORDER BY regionName",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The aggregation logic itself is sound: per-region per-person visit counts, a region-level AVG over those counts, and a count of persons strictly above it (size([...]) equals COUNT of those persons), with ORDER BY regionName and an output alias being harmless differences. The decisive mismatch is the data path. The schema permits two unrelated paths, Person-[:VISITS]->Place-[:PART_OF]->Region (used by the reference) and Person-[:PERFORMS_VISIT]->Visit-[:LOCATED_AT]->Place-[:PART_OF]->Region (used by the candidate), and nothing constrains the VISITS relationships to be 1:1 with PERFORMS_VISIT/LOCATED_AT edges; the duplicated duration/starttime/endtime/id properties on both VISITS and Visit suggest two independent encodings. A schema-consistent counterexample (a person with two VISITS edges to places in region X but only one PERFORMS_VISIT visit located in X, or VISITS edges with no Visit records at all) changes each person's visitCount and therefore which persons are above the average, so the returned counts can differ, and a graph where VISITS edges are absent makes the candidate return nothing. Correctness therefore depends on an unestablishable data assumption. Secondarily, grouping by p.id rather than by the Person node assumes id uniquely identifies a Person, which the schema does not guarantee; two distinct Person nodes sharing an id in one region would be merged into a single personVisits entry by the candidate but counted separately by the reference."
+    }
+  },
+  {
+    "query": "query-86",
+    "case": {
+      "source_index": 86,
+      "question": "For each country, find the average duration in seconds of visits to 'Restaurant' places made by persons whose confirmed time is after '2020-04-20'. Return the country name and the average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place {type: 'Restaurant'}) MATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime > datetime('2020-04-20T00:00:00.000Z') AND v.duration.seconds IS NOT NULL WITH c.name AS country, v.duration.seconds AS visitDuration RETURN country, AVG(visitDuration)",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime > datetime('2020-04-20') AND pl.type = 'Restaurant' RETURN c.name AS country, avg(duration.inSeconds(v.duration).seconds) AS avg_visit_duration_seconds ORDER BY country",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime > datetime('2020-04-20') AND pl.type = 'Restaurant' RETURN c.name AS country, avg(duration.inSeconds(v.duration).seconds) AS avg_visit_duration_seconds ORDER BY country",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Two decisive mismatches. (1) Modeling path: the reference averages the duration stored on the Person-[:VISITS]->Place relationship, while the candidate goes Person-[:PERFORMS_VISIT]->Visit-[:LOCATED_AT]->Place. The schema declares these as independent structures, so a Restaurant visit recorded as a VISITS relationship without a matching Visit node (or with a Visit.duration differing from the relationship duration) is silently dropped or given a different duration, changing per-country averages. (2) Duration extraction: the reference reads the property component v.duration.seconds (the duration's own seconds field), whereas the candidate computes duration.inSeconds(v.duration).seconds, which yields only the seconds component of the re-normalized duration (and is a string result in Neo4j 5, where '.seconds' property access would fail outright), so it is not the total visit duration in seconds — e.g. a 2h30m45s visit and a 45s visit collapse to the same value. Additionally datetime('2020-04-20') is a timezone-less local datetime versus the reference's explicit UTC instant, so records whose confirmedtime offset places them near the boundary can be included or excluded differently."
+    }
+  },
+  {
+    "query": "query-87",
+    "case": {
+      "source_index": 87,
+      "question": "Calculate the average number of visits per person to 'Grocery shop' places and the average number of visits per person to 'Restaurant' places. Then, determine the percentage difference between these two averages.",
+      "reference_query": "MATCH (p:Person)-[:VISITS]->(g:Place {type: 'Grocery shop'}) WITH p, COUNT(g) AS groceryVisits WITH AVG(groceryVisits) AS avgGroceryVisits MATCH (p:Person)-[:VISITS]->(r:Place {type: 'Restaurant'}) WITH avgGroceryVisits, p, COUNT(r) AS restaurantVisits WITH avgGroceryVisits, AVG(restaurantVisits) AS avgRestaurantVisits RETURN (avgRestaurantVisits - avgGroceryVisits) / avgGroceryVisits * 100 AS percentageDifference",
+      "initial_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)\nWHERE pl.type IN ['Grocery shop', 'Restaurant']\nWITH p, pl.type AS placeType, count(v) AS visitsPerPerson\nWITH avg(CASE WHEN placeType = 'Grocery shop' THEN visitsPerPerson END) AS avgGroceryShopVisits, avg(CASE WHEN placeType = 'Restaurant' THEN visitsPerPerson END) AS avgRestaurantVisits\nRETURN avgGroceryShopVisits, avgRestaurantVisits, (avgGroceryShopVisits - avgRestaurantVisits) / ((avgGroceryShopVisits + avgRestaurantVisits) / 2) * 100 AS percentageDifference",
+      "initial_status": "compilation_failed",
+      "final_query": "CALL {\n  MATCH (p:Person)-[v:VISITS]->(pl:Place)\n  WHERE pl.type = 'Grocery shop'\n  WITH p, count(v) AS visitsPerPerson\n  RETURN avg(visitsPerPerson) AS avgGroceryShopVisits\n}\nCALL {\n  MATCH (p:Person)-[v:VISITS]->(pl:Place)\n  WHERE pl.type = 'Restaurant'\n  WITH p, count(v) AS visitsPerPerson\n  RETURN avg(visitsPerPerson) AS avgRestaurantVisits\n}\nRETURN avgGroceryShopVisits AS avgGroceryShopVisits, avgRestaurantVisits AS avgRestaurantVisits, (avgGroceryShopVisits - avgRestaurantVisits) / ((avgGroceryShopVisits + avgRestaurantVisits) / 2.0) * 100 AS percentageDifference",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The per-person aggregates agree (both group by Person, count only VISITS edges to Places of the given type, and average over only persons having >=1 such visit), but the final metric differs. The candidate computes (grocery - restaurant) / ((grocery+restaurant)/2) * 100 (symmetric percent difference), while the reference computes (restaurant - grocery) / grocery * 100 (change relative to grocery). Concrete counterexample: avgGrocery=2, avgRestaurant=4 -> candidate -66.67, reference 100. The question does not state which base/order to use for 'percentage difference', and the candidate's fixed subtraction order can yield a negative value even though a percentage difference is normally reported non-negative, so correctness cannot be established from the question alone."
+    }
+  },
+  {
+    "query": "query-88",
+    "case": {
+      "source_index": 88,
+      "question": "For each continent, determine the average number of visits performed by people with 'Healthy' health status and the average duration of those visits in seconds. Return the continent name, average number of visits, and average visit duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Healthy'})-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds IS NOT NULL WITH c.name AS continent, p, v WITH continent, p, COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDurationPerVisit WITH continent, AVG(visitCount) AS avgVisits, AVG(avgDurationPerVisit) AS overallAvgDuration RETURN continent, avgVisits, overallAvgDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No candidate Cypher was generated (\"None\"), so nothing answers the question; it cannot be semantically equivalent to the reference, which groups VISITS by continent via the Place→Region→Country→Continent PART_OF chain for Healthy persons and averages per-person visit counts and durations."
+    }
+  },
+  {
+    "query": "query-89",
+    "case": {
+      "source_index": 89,
+      "question": "Calculate the average visit duration in seconds for visits to 'Mall' type places, grouped by the health status of the person performing the visit. Return the health status and the average duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place {type: 'Mall'}) WHERE v.duration.seconds IS NOT NULL WITH p.healthstatus AS healthStatus, v.duration.seconds AS duration RETURN healthStatus, AVG(duration) AS avgDuration",
+      "initial_query": "MATCH (person:Person)-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE place.type = 'Mall'\nWITH person.healthstatus AS healthStatus, avg(visit.duration.seconds) AS averageDurationSeconds\nRETURN healthStatus, averageDurationSeconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (person:Person)-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)\nWHERE place.type = 'Mall'\nWITH person.healthstatus AS healthStatus, avg(visit.duration.seconds) AS averageDurationSeconds\nRETURN healthStatus, averageDurationSeconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The candidate reaches Malls via (Person)-[:PERFORMS_VISIT]->(Visit)-[:LOCATED_AT]->(Place), while the reference uses the independent (Person)-[:VISITS]->(Place {type:'Mall'}) relationship; the schema declares both patterns with no constraint linking them, so a Person can have a VISITS edge to a Mall with no corresponding Visit/LOCATED_AT chain (or vice versa), making the two groupings/averages differ. Grouping grain itself is fine (WITH with a non-aggregate key plus avg() groups by healthstatus), but the candidate omits the reference's non-null duration filter, so a healthstatus whose visits all have NULL duration yields an extra row with avg = null instead of being omitted. Correctness therefore depends on the unstated assumption that the two visit representations are perfectly redundant."
+    }
+  },
+  {
+    "query": "query-90",
+    "case": {
+      "source_index": 90,
+      "question": "For each country, compute the total number of visits and the average duration (in seconds) of visits performed by people whose confirmed time is before '2020-04-15'. Return the country name, total visit count, and average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime < datetime('2020-04-15T00:00:00.000Z') AND v.duration.seconds IS NOT NULL WITH c.name AS country, v RETURN country, count(v) AS totalVisits, avg(v.duration.seconds) AS avgDuration",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime < datetime('2020-04-15') RETURN c.name AS country, count(v) AS totalVisits, avg(toFloat(v.duration)) AS averageDurationSeconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WHERE p.confirmedtime < datetime('2020-04-15') RETURN c.name AS country, count(v) AS totalVisits, avg(duration.inSeconds(v.duration)) AS averageDurationSeconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "correct",
+      "reference_equivalence": "different",
+      "reason": "Candidate groups by c.name, counts visit rows, and averages durations converted with duration.inSeconds(v.duration) over the Visit->LOCATED_AT->Place->PART_OF->Region->PART_OF->Country path, restricted to p.confirmedtime < 2020-04-15 — this matches the question's per-country grain. Two notes: datetime('2020-04-15') is interpreted in the server default timezone, identical to the reference's explicit Z under the default UTC, so only a non-UTC configuration could shift the boundary; and counting Visit nodes (rather than VISITS relationships) would double-count only if a Visit had multiple LOCATED_AT places, which is not established by the schema. The reference differs concretely: v.duration.seconds is not a valid property access on a DURATION value (Neo4j yields NULL there, or a type error), so its 'v.duration.seconds IS NOT NULL' filter removes every row, leaving an empty result (or an error) where the candidate returns the aggregates; the reference also counts VISITS relationship rows, not the visited entities."
+    }
+  },
+  {
+    "query": "query-91",
+    "case": {
+      "source_index": 91,
+      "question": "For each region, calculate the percentage of visits that occurred at 'Mall' type places. Return the region name and the percentage of visits at malls.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region) WITH r, pl, v MATCH (p)-[v2:VISITS]->(pl2:Place {type: 'Mall'})-[:PART_OF]->(r) WITH r.name AS region, COUNT(v) AS totalVisits, COUNT(CASE WHEN pl2.type = 'Mall' THEN v2 ELSE NULL END) AS mallVisits RETURN region, toFloat(mallVisits) / totalVisits * 100 AS mallVisitPercentage",
+      "initial_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region,\n       ROUND(100.0 * SUM(CASE WHEN p.type = 'Mall' THEN 1 ELSE 0 END) / COUNT(v), 2) AS mallVisitPercentage\nORDER BY region",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (v:Visit)-[:LOCATED_AT]->(p:Place)-[:PART_OF]->(r:Region)\nWITH r, COUNT(v) AS totalVisits, SUM(CASE WHEN p.type = 'Mall' THEN 1 ELSE 0 END) AS mallVisits\nRETURN r.name AS region, ROUND(100.0 * mallVisits / totalVisits, 2) AS mallVisitPercentage\nORDER BY region",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The candidate computes mall share per region over Visit nodes reached via (Visit)-[:LOCATED_AT]->(Place)-[:PART_OF]->(Region), with SUM(CASE WHEN p.type='Mall'...) over the same rows, which answers the question under that modeling; but the schema offers a parallel Person-[:VISITS]->Place path (VISITS carries the same duration/starttime/id/endtime props as Visit), so correctness depends on unestablished 1:1 correspondence: a Visit with two LOCATED_AT places inflates that region's denominator, a Visit performed by several persons is counted once, and person VISITS relationships lacking a Visit entity are omitted entirely. The reference is decisively different: its second MATCH constrains pl2 to Place {type:'Mall'}, so pl2.type='Mall' is always true and v2 is non-null on every surviving row; with the cross product from the re-bound p, mallVisits = COUNT(v) = totalVisits, so it returns 100.0 for every region having at least one mall visit (regions without mall visits are dropped by the inner MATCH)."
+    }
+  },
+  {
+    "query": "query-92",
+    "case": {
+      "source_index": 92,
+      "question": "For each region, calculate the total number of visits and the average duration in seconds of visits performed by persons whose health status is 'Sick'. Return the region name, total visits, and average duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place)-[:PART_OF]->(r:Region) WHERE v.duration.seconds IS NOT NULL WITH r.name AS regionName, COUNT(v) AS totalVisits, AVG(v.duration.seconds) AS avgDuration RETURN regionName, totalVisits, avgDuration",
+      "initial_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, count(v) AS totalVisits, avg(v.duration.inSeconds) AS averageDuration",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)\nRETURN r.name AS region, count(v) AS totalVisits, avg(v.duration.inSeconds) AS averageDuration",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "Two concrete divergences: (1) Different traversal model: the reference aggregates Person-[VISITS]->Place edges, which are the relationships that actually carry the duration property, while the candidate goes Person-PERFORMS_VISIT->Visit-LOCATED_AT->Place. Nothing guarantees these two paths denote the same visit set or the same cardinality — a Visit may have several LOCATED_AT Places (inflating count/avg), a Person may have multiple PERFORMS_VISIT edges to one Visit, or VISITS edges may exist without a corresponding Visit node, so counts and averages can differ. (2) NULL handling: the reference filters 'v.duration.seconds IS NOT NULL' before aggregation, excluding duration-less visits from BOTH count and average; the candidate omits this filter, so its count(v) includes visits whose duration is missing while AVG silently skips them, yielding a different totalVisits whenever any visit lacks a duration. Additionally, 'v.duration.inSeconds' is not a property defined in the schema (Visit.duration is a single DURATION value), so the seconds component is extracted by a non-schema expression."
+    }
+  },
+  {
+    "query": "query-93",
+    "case": {
+      "source_index": 93,
+      "question": "For each country, compute the ratio of visits occurring before '2020-05-01 T00:00:00 UTC' to the total number of visits. Return the country name and the calculated ratio.",
+      "reference_query": "MATCH (v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country) WITH c, v WHERE v.starttime < datetime('2020-05-01T00:00:00 UTC') WITH c, count(v) AS earlyVisits MATCH (v2:Visit)-[:LOCATED_AT]->(pl2:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(c) WITH c.name AS countryName, earlyVisits, count(v2) AS totalVisits RETURN countryName, toFloat(earlyVisits) / totalVisits AS visitRatio",
+      "initial_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWITH c.name AS country, count(v) AS totalVisits, sum(CASE WHEN v.starttime < datetime('2020-05-01T00:00:00Z') THEN 1 ELSE 0 END) AS beforeVisits\nRETURN country, toFloat(beforeVisits) / toFloat(totalVisits) AS ratio\nORDER BY country",
+      "initial_status": "compilation_failed",
+      "final_query": "MATCH (p:Person)-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(pl:Place)-[:PART_OF]->(r:Region)-[:PART_OF]->(c:Country)\nWITH c.name AS country, v\nRETURN country, toFloat(sum(CASE WHEN v.starttime < datetime('2020-05-01T00:00:00Z') THEN 1 ELSE 0 END)) / toFloat(count(v)) AS ratio\nORDER BY country",
+      "final_status": "compilation_failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "revision_limit"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "uncertain",
+      "reason": "The candidate adds a (p:Person)-[:PERFORMS_VISIT]->(v:Visit) hop that the reference lacks, so correctness depends on an unstated cardinality assumption. The schema declares PERFORMS_VISIT with no uniqueness/mandatory constraint: if any Visit has no performing Person, it is dropped from both numerator and denominator (reference still counts it in totalVisits); if a Visit has multiple performers, rows duplicate and count(v)/sum(CASE...) become row counts rather than visit counts, shifting the ratio (e.g. visits E=5,T=10 with one duplicated early visit give 6/11 instead of 0.5). Everything else matches: NULL starttime falls into the ELSE 0 branch (same as the reference WHERE filter), '...Z' equals '... UTC', the ratio is division of counts within each country group, and grouping by c.name instead of the Country node only differs if two Country nodes share a name."
+    }
+  },
+  {
+    "query": "query-94",
+    "case": {
+      "source_index": 94,
+      "question": "For each continent, calculate the average number of visits per person and the average duration in seconds of those visits. Return the continent name, average visits per person, and average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent) WHERE v.duration.seconds IS NOT NULL WITH c.name AS continentName, p, v.duration.seconds AS visitDuration WITH continentName, p, COUNT(visitDuration) AS visitCount, AVG(visitDuration) AS avgVisitDurationPerPersonPerVisit WITH continentName, AVG(visitCount) AS avgVisitsPerPerson, AVG(avgVisitDurationPerPersonPerVisit) AS avgVisitDuration RETURN continentName, avgVisitsPerPerson, avgVisitDuration",
+      "initial_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(p:Place)<-[v:VISITS]-(person:Person)\nWITH c, person, count(v) AS visitCount, sum(duration(v).seconds) AS personDurationSeconds\nWITH c, avg(visitCount) AS avgVisitsPerPerson, sum(personDurationSeconds) / sum(visitCount) AS avgVisitDurationSeconds\nRETURN c.name AS continent, avgVisitsPerPerson, avgVisitDurationSeconds\nORDER BY continent",
+      "initial_status": "compiled",
+      "final_query": "MATCH (c:Continent)<-[:PART_OF]-(co:Country)<-[:PART_OF]-(r:Region)<-[:PART_OF]-(p:Place)<-[v:VISITS]-(person:Person)\nWITH c, person, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS personDurationSeconds\nWITH c, sum(visitCount) AS totalVisits, count(person) AS personCount, sum(personDurationSeconds) AS totalDurationSeconds\nRETURN c.name AS continent,\n       toFloat(totalVisits) / toFloat(personCount) AS avgVisitsPerPerson,\n       toFloat(totalDurationSeconds) / toFloat(totalVisits) AS avgVisitDurationSeconds\nORDER BY continent",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "Two decisive differences. (1) The reference filters v.duration.seconds IS NOT NULL before any counting; the candidate does not. `sum(duration.inSeconds(v.duration))` silently drops NULL durations, yet `count(v)` keeps those relationships in both the visit count and the avg-duration denominator (totalDurationSeconds/totalVisits), so a single VISITS without a duration understates the average duration and inflates avgVisitsPerPerson relative to the intended per-visit figures. Since the schema only declares duration as a DURATION property with no non-NULL guarantee, correctness rests on an unestablished assumption. (2) Aggregation grain for average duration: the reference takes AVG of per-person average durations (each person weighted equally), while the candidate computes total duration / total visits (each visit weighted equally). Counterexample: person A has 1 visit of 100s, person B has 3 visits of 10s each -> reference yields (100+10)/2 = 55, candidate yields 130/4 = 32.5. Also minor: grouping by the Continent node instead of c.name would emit separate rows if two Continent nodes share a name, and ORDER BY continent adds ordering the reference does not specify."
+    }
+  },
+  {
+    "query": "query-95",
+    "case": {
+      "source_index": 95,
+      "question": "For each continent, calculate the average number of visits performed by persons with 'Sick' health status and the average duration (in seconds) of these visits. Return the continent name, average number of visits, and average visit duration.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place)\nMATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWHERE v.duration.seconds IS NOT NULL\nWITH c.name AS continent, COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDuration\nRETURN continent, AVG(visitCount) AS avgVisits, AVG(avgDuration) AS overallAvgDuration",
+      "initial_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS personDurationSeconds\nWITH c, avg(visitCount) AS averageNumberOfVisits, sum(personDurationSeconds) AS totalDurationSeconds, sum(visitCount) AS totalVisits\nRETURN c.name AS continentName, averageNumberOfVisits AS averageNumberOfVisits, toFloat(totalDurationSeconds) / totalVisits AS averageVisitDurationSeconds",
+      "initial_status": "compiled",
+      "final_query": "MATCH (p:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(v:Visit)-[:LOCATED_AT]->(:Place)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWITH c, p, count(v) AS visitCount, sum(duration.inSeconds(v.duration)) AS personDurationSeconds\nWITH c, avg(visitCount) AS averageNumberOfVisits, sum(personDurationSeconds) AS totalDurationSeconds, sum(visitCount) AS totalVisits\nRETURN c.name AS continentName, averageNumberOfVisits AS averageNumberOfVisits, toFloat(totalDurationSeconds) / totalVisits AS averageVisitDurationSeconds",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "Decisive differences: (1) aggregation grain — the candidate groups by (continent, person) then averages the per-person visit counts, while the reference groups by continent only, so AVG(visitCount) collapses to the per-continent TOTAL visit count; with two sick persons having 1 and 3 visits in a continent the candidate returns 2 and the reference returns 4. (2) Duration measure/property — the candidate uses duration.inSeconds() on Visit.duration (total seconds, e.g. 90 for PT1M30S), whereas the reference uses the seconds component accessor on the VISITS relationship's duration property (30 for the same value), and it is not established that Visit.duration and VISITS.duration hold the same values, nor that the PERFORMS_VISIT/Visit/LOCATED_AT chain covers the same visits as the direct Person-[:VISITS]->Place pattern. (3) NULL handling — the candidate has no non-null duration guard: sum(duration.inSeconds(v.duration)) skips NULLs while sum(visitCount) still counts those visits, so any Visit without a duration deflates the average, whereas the reference excludes such visits entirely; since duration is not guaranteed non-NULL by the schema, correctness depends on that unstated assumption (also 0/totalVisits when all durations are NULL)."
+    }
+  },
+  {
+    "query": "query-96",
+    "case": {
+      "source_index": 96,
+      "question": "For each type of place, determine the average visit duration (in seconds) and the percentage of visits made by persons confirmed to be sick after the visit started. Return the place type, average duration, and percentage of visits made by persons confirmed sick after the visit.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)\nWHERE v.duration.seconds IS NOT NULL AND p.confirmedtime > v.starttime\nWITH pl.type AS placeType, v.duration.seconds AS visitDuration, CASE WHEN p.healthstatus = 'Sick' THEN 1 ELSE 0 END AS sickAfterVisit\nWITH placeType, AVG(visitDuration) AS avgDuration, SUM(sickAfterVisit) AS sickVisitCount, COUNT(*) AS totalVisits\nRETURN placeType, avgDuration, (toFloat(sickVisitCount) / totalVisits) * 100 AS sickVisitPercentage",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "No candidate query was supplied (Generated Cypher: None), so nothing can answer the question about per-place-type average visit duration and percentage of visits by persons whose confirmedtime is after the visit starttime; an empty candidate trivially has no semantics equivalent to the reference query."
+    }
+  },
+  {
+    "query": "query-97",
+    "case": {
+      "source_index": 97,
+      "question": "For each region, compute the average duration (in seconds) of visits made by persons whose health status is 'Sick', and also calculate the total number of distinct places visited by these persons. Return the region name, average visit duration, and total distinct places visited.",
+      "reference_query": "MATCH (p:Person {healthstatus: 'Sick'})-[v:VISITS]->(pl:Place)\nMATCH (pl)-[:PART_OF]->(r:Region)\nWHERE v.duration.seconds IS NOT NULL\nWITH r.name AS regionName, v.duration.seconds AS visitDuration, pl\nWITH regionName, AVG(visitDuration) AS avgDuration, COLLECT(DISTINCT pl.id) AS distinctPlaceIds\nRETURN regionName, avgDuration, SIZE(distinctPlaceIds) AS totalDistinctPlaces",
+      "initial_query": "MATCH (person:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)\nRETURN region.name AS regionName, avg(visit.duration.seconds) AS averageVisitDurationSeconds, count(DISTINCT place) AS totalDistinctPlacesVisited",
+      "initial_status": "compiled",
+      "final_query": "MATCH (person:Person {healthstatus: 'Sick'})-[:PERFORMS_VISIT]->(visit:Visit)-[:LOCATED_AT]->(place:Place)-[:PART_OF]->(region:Region)\nRETURN region.name AS regionName, avg(visit.duration.seconds) AS averageVisitDurationSeconds, count(DISTINCT place) AS totalDistinctPlacesVisited",
+      "final_status": "compiled",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "critic_accepted"
+    },
+    "result": {
+      "verdict": "uncertain",
+      "reference_equivalence": "different",
+      "reason": "The schema exposes two parallel visit models: the direct (Person)-[:VISITS {duration}]->(Place) used by the reference, and the normalized (Person)-[:PERFORMS_VISIT]->(Visit {duration})-[:LOCATED_AT]->(Place) used by the candidate; both carry duration, and the schema does not guarantee the two representations hold the same visits, so the candidate's result depends on an unestablishable data assumption (if only VISITS is populated it returns no rows). Separately, the reference's WHERE v.duration.seconds IS NOT NULL removes null-duration visits before COLLECT(DISTINCT pl.id), so it can drop places (or whole regions) that the candidate counts; AVG ignores nulls in both, so only the distinct-place count and row set differ, making the two non-equivalent (the candidate is arguably closer to the question's wording)."
+    }
+  },
+  {
+    "query": "query-98",
+    "case": {
+      "source_index": 98,
+      "question": "For each country, determine the average number of visits performed by each person and the average duration (in seconds) of those visits. Return the country name, the average visits per person, and the average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)\nMATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(c:Country)\nWHERE v.duration.seconds IS NOT NULL\nWITH c.name AS countryName, p, COUNT(v) AS visitCount, AVG(v.duration.seconds) AS avgDuration\nWITH countryName, AVG(visitCount) AS avgVisitsPerPerson, AVG(avgDuration) AS overallAvgDuration\nRETURN countryName, avgVisitsPerPerson, overallAvgDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate is empty ('None'), so no Cypher was produced; it returns no country name, no average visits per person, and no average duration, whereas the reference aggregates (p:Person)-[v:VISITS]->(pl:Place)->:Region->:Country, filtering v.duration.seconds IS NOT NULL, and returns countryName, AVG(visitCount) and AVG of per-person average durations."
+    }
+  },
+  {
+    "query": "query-99",
+    "case": {
+      "source_index": 99,
+      "question": "For each continent, calculate the total number of persons who have visited at least two different types of places and the average visit duration (in seconds) for those persons. Return the continent name, the count of persons, and the average visit duration.",
+      "reference_query": "MATCH (p:Person)-[v:VISITS]->(pl:Place)\nMATCH (pl)-[:PART_OF]->(:Region)-[:PART_OF]->(:Country)-[:PART_OF]->(c:Continent)\nWHERE v.duration.seconds IS NOT NULL\nWITH c.name AS continentName, p, pl.type AS placeType, v.duration.seconds AS visitDuration\nWITH continentName, p, COLLECT(DISTINCT placeType) AS placeTypes, AVG(visitDuration) AS avgDuration\nWHERE SIZE(placeTypes) >= 2\nWITH continentName, avgDuration\nWITH continentName, COUNT(DISTINCT p) AS personCount, AVG(avgDuration) AS overallAvgDuration\nRETURN continentName, personCount, overallAvgDuration",
+      "initial_query": null,
+      "initial_status": "failed",
+      "final_query": null,
+      "final_status": "failed",
+      "initial_exact_match": false,
+      "final_exact_match": false,
+      "stop_reason": "query_error"
+    },
+    "result": {
+      "verdict": "incorrect",
+      "reference_equivalence": "different",
+      "reason": "The candidate query is 'None' (empty/missing), so it produces no result at all for the requested per-continent person count and average visit duration. There is nothing to be semantically equivalent to the reference; a concrete counterexample is trivial — any graph returns no rows versus the reference's continent-grouped rows."
+    }
+  }
+]

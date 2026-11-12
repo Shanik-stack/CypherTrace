@@ -1,0 +1,23 @@
+{
+  "total_queries": 99,
+  "correct": 52,
+  "incorrect": 28,
+  "uncertain": 19,
+  "query_correctness_rate": 0.5252525252525253,
+  "accuracy_excluding_uncertain": 0.65,
+  "critic_accuracy": 0.8375,
+  "critic_precision": 0.8095238095238095,
+  "critic_recall": 0.9807692307692307,
+  "critic_f1": 0.8869565217391304,
+  "TP": 51,
+  "TN": 16,
+  "FP": 12,
+  "FN": 1,
+  "errors": [
+    {
+      "query": "query-70",
+      "error": "baidu/ernie-5.5-flash-preview:free hit the completion limit (max_output_tokens=16000, finish_reason=length)"
+    }
+  ],
+  "failed_queries": 1
+}

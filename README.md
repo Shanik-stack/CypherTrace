@@ -138,7 +138,7 @@ Each batch creates a timestamped folder under [`outputs/`](outputs/).
 | [`src/pipeline/`](src/pipeline/) | Run configuration, Cypher normalization and parsing, batch processing, and artifact writing. |
 | [`src/pipeline/agent/`](src/pipeline/agent/) | Generator, critic, and judge clients, their prompts, and the bounded revision loop. |
 | [`src/pipeline/data/`](src/pipeline/data/) | Mind-the-Query and CypherBench loaders and schema preprocessing. |
-| [`src/graph_query_analysis/`](src/graph_query_analysis/) | Scope and type checks, symbolic row operators, multiplicity expressions, and operator-by-operator reports. |
+| [`src/graph_query_analysis/`](src/graph_query_analysis/README.md) | Analyzer guide, clause decomposition, bag semantics, and operator-by-operator reports. |
 | [`src/graph_query_analysis/reporting/`](src/graph_query_analysis/reporting/) | Supporting analysis and rendering modules for scope, grouping, filters, lineage, ordering, and schema evidence. |
 | [`configs/`](configs/) | JSON presets for dataset selection, revision budgets, report settings, and model options. |
 | [`outputs/`](outputs/) | Saved experiment runs, query histories, reports, schemas, and evaluation artifacts. |

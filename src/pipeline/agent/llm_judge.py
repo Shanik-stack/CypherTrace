@@ -3,25 +3,35 @@ import json
 from pipeline.agent.agents import JudgeAgent
 
 def eval_with_judge(run_identifier: str, judge: JudgeAgent):
-    # parents[2] moves up two directories
     path = Path(__file__).resolve().parents[3]
-    run_dir = path / 'outputs' /f"{run_identifier}"
+    run_dir = path / 'outputs' / f"{run_identifier}"
     evaluation = json.loads((run_dir / 'evaluation.json').read_text(encoding='utf-8'))
     schemas = json.loads((run_dir / 'schemas.json').read_text(encoding='utf-8'))
 
     llm_judge_result = []
+    errors = []
+
     for query, (case, schema) in enumerate(zip(evaluation['cases'], schemas, strict=True)):
-        result = judge.forward(
-            question=case['question'],
-            schema=schema,
-            reference_query=case['reference_query'],
-            generated_query=case['final_query']
-        )
-        llm_judge_result.append({"query": f"query-{query}", "case" : case, "result": result})
+        print(f"Query: {query} being judged")
+        try:
+            result = judge.forward(
+                question=case['question'],
+                schema=schema,
+                reference_query=case['reference_query'],
+                generated_query=case['final_query']
+            )
+            llm_judge_result.append({"query": f"query-{query}", "case": case, "result": result})
+
+        except Exception as e:
+            errors.append({"query": f"query-{query}", "error": str(e)})
+            print("\n ERROR during judgement: ", str(e), "\n")
     analysis_result = judgement_analysis(llm_judge_result)
+    analysis_result['errors'] = errors
+    analysis_result['failed_queries'] = len(errors)
+
     (run_dir / 'judge_results.json').write_text(json.dumps(llm_judge_result, indent=2, ensure_ascii=False), encoding='utf-8')
     (run_dir / 'analysis_judge_results.json').write_text(json.dumps(analysis_result, indent=2, ensure_ascii=False), encoding='utf-8')
-    
+
     return llm_judge_result, analysis_result
 
 
@@ -47,7 +57,7 @@ def judgement_analysis(judge_results: list[dict]):
         # Positive = pipeline accepted the query
         predicted = item['case']['stop_reason'] == 'critic_accepted'
 
-        # LLM judge provides proxy ground truth
+        # LLM judge provides pseu ground truth
         actual = verdict == 'correct'
 
         if predicted and actual:
